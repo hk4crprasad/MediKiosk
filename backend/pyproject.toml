@@ -5,6 +5,7 @@ description = "FastAPI backend for the MediKiosk hackathon MVP"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.14,<2",
+  "aiohttp>=3.10,<4",
   "asyncpg>=0.30,<1",
   "azure-storage-blob>=12.24,<13",
   "bcrypt>=4.2,<5",

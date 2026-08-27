@@ -23,8 +23,9 @@ class AzureBlobDocumentStorage:
         self._create_container = settings.azure_blob_create_container
 
     async def upload(self, storage_key: str, content: bytes, content_type: str) -> None:
-        service = BlobServiceClient.from_connection_string(self._connection_string)
+        service: BlobServiceClient | None = None
         try:
+            service = BlobServiceClient.from_connection_string(self._connection_string)
             container = service.get_container_client(self._container_name)
             if self._create_container:
                 try:
@@ -37,32 +38,38 @@ class AzureBlobDocumentStorage:
                 overwrite=False,
                 content_settings=ContentSettings(content_type=content_type),
             )
-        except (AzureError, ValueError) as exc:
+        except (AzureError, ImportError, ValueError) as exc:
             raise DomainError("storage_unavailable", "Azure Blob Storage could not store the document", status_code=503) from exc
         finally:
-            await service.close()
+            if service is not None:
+                await service.close()
 
     async def delete(self, storage_key: str) -> None:
-        service = BlobServiceClient.from_connection_string(self._connection_string)
+        service: BlobServiceClient | None = None
         try:
+            service = BlobServiceClient.from_connection_string(self._connection_string)
             await service.get_container_client(self._container_name).delete_blob(storage_key, delete_snapshots="include")
         except ResourceNotFoundError:
             return
-        except (AzureError, ValueError) as exc:
+        except (AzureError, ImportError, ValueError) as exc:
             raise DomainError("storage_unavailable", "Azure Blob Storage could not remove the document", status_code=503) from exc
         finally:
-            await service.close()
+            if service is not None:
+                await service.close()
 
     async def download(self, storage_key: str) -> AsyncIterator[bytes]:
-        service = BlobServiceClient.from_connection_string(self._connection_string)
+        service: BlobServiceClient | None = None
         try:
+            service = BlobServiceClient.from_connection_string(self._connection_string)
             blob = service.get_container_client(self._container_name).get_blob_client(storage_key)
             downloader = await blob.download_blob()
         except ResourceNotFoundError as exc:
-            await service.close()
+            if service is not None:
+                await service.close()
             raise DomainError("document_content_not_found", "Document content is unavailable", status_code=404) from exc
-        except (AzureError, ValueError) as exc:
-            await service.close()
+        except (AzureError, ImportError, ValueError) as exc:
+            if service is not None:
+                await service.close()
             raise DomainError("storage_unavailable", "Azure Blob Storage could not read the document", status_code=503) from exc
 
         async def stream() -> AsyncIterator[bytes]:

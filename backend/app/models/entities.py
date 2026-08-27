@@ -167,6 +167,21 @@ class Document(TimestampedModel, Base):
     )
 
 
+class AssistiveArtifact(Base):
+    __tablename__ = "assistive_artifacts"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    encounter_id: Mapped[UUID] = mapped_column(ForeignKey("encounters.id"), index=True)
+    document_id: Mapped[UUID | None] = mapped_column(ForeignKey("documents.id"), index=True)
+    artifact_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    language: Mapped[str | None] = mapped_column(String(16))
+    raw_text: Mapped[str] = mapped_column(Text, nullable=False)
+    structured_data: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
+    confidence: Mapped[float | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class Summary(TimestampedModel, Base):
     __tablename__ = "summaries"
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -206,5 +221,5 @@ class FhirExport(Base):
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     encounter_id: Mapped[UUID] = mapped_column(ForeignKey("encounters.id"), index=True)
     bundle: Mapped[dict] = mapped_column(JsonType, nullable=False)
-    validation_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    validation_status: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

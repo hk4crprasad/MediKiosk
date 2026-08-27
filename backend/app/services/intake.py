@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.clinical_config.pathways import PATHWAY_VERSION, active_questions
+from app.clinical_config.pathways import CHEST_PATHWAY_VERSION, active_questions, is_supported_pathway
 from app.clinical_config.red_flags import (
     CHEST_BREATHLESSNESS_REASON,
     CHEST_BREATHLESSNESS_RULE_ID,
@@ -40,10 +40,10 @@ async def answer_map(session: AsyncSession, encounter_id: UUID) -> dict[str, obj
 
 
 async def next_question(session: AsyncSession, encounter: Encounter) -> dict | None:
-    if encounter.pathway_version != PATHWAY_VERSION:
+    if not is_supported_pathway(encounter.pathway_version):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Configured pathway version is not available")
     answers = await answer_map(session, encounter.id)
-    for question in active_questions(answers):
+    for question in active_questions(encounter.pathway_version, answers):
         if question["key"] not in answers:
             return question
     return None
@@ -108,6 +108,8 @@ async def submit_response(
 
 
 async def evaluate_red_flags(session: AsyncSession, encounter: Encounter, answers: dict[str, object]) -> list[RedFlag]:
+    if encounter.pathway_version != CHEST_PATHWAY_VERSION:
+        return []
     triggered: list[RedFlag] = []
     is_triggered = answers.get("chief_complaint") == "chest_discomfort" and answers.get("breathlessness") in {
         True,
@@ -148,5 +150,11 @@ async def evaluate_red_flags(session: AsyncSession, encounter: Encounter, answer
 
 
 async def required_missing(session: AsyncSession, encounter: Encounter) -> list[str]:
+    if not is_supported_pathway(encounter.pathway_version):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Configured pathway version is not available")
     answers = await answer_map(session, encounter.id)
-    return [question["key"] for question in active_questions(answers) if question["required"] and question["key"] not in answers]
+    return [
+        question["key"]
+        for question in active_questions(encounter.pathway_version, answers)
+        if question["required"] and question["key"] not in answers
+    ]

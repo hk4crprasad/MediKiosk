@@ -1,8 +1,9 @@
 from typing import Any
 
-PATHWAY_VERSION = "chest-discomfort-v1"
+CHEST_PATHWAY_VERSION = "chest-discomfort-v1"
+AYUSH_PATHWAY_VERSION = "ayush-dashavidha-v1"
 
-QUESTIONS: list[dict[str, Any]] = [
+CHEST_QUESTIONS: list[dict[str, Any]] = [
     {
         "key": "chief_complaint",
         "section": "presenting_complaint",
@@ -56,9 +57,145 @@ QUESTIONS: list[dict[str, Any]] = [
 ]
 
 
-def active_questions(answers: dict[str, Any]) -> list[dict[str, Any]]:
+AYUSH_QUESTIONS: list[dict[str, Any]] = [
+    {
+        "key": "ayush_prakriti",
+        "section": "dashavidha_pariksha",
+        "prompt": "How would you describe your usual body constitution, if known?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_vikriti",
+        "section": "dashavidha_pariksha",
+        "prompt": "What change from your usual state are you experiencing today?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "ayush_sara",
+        "section": "dashavidha_pariksha",
+        "prompt": "Please describe your usual tissue strength or vitality, if known.",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_samhanana",
+        "section": "dashavidha_pariksha",
+        "prompt": "How would you describe your body build or physical frame?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_pramana",
+        "section": "dashavidha_pariksha",
+        "prompt": "Please share relevant body measurements or proportions, if you wish.",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_satmya",
+        "section": "dashavidha_pariksha",
+        "prompt": "Which foods, routines, or environments usually suit you well?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_sattva",
+        "section": "dashavidha_pariksha",
+        "prompt": "How would you describe your usual mental resilience or response to stress?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_ahara_shakti",
+        "section": "dashavidha_pariksha",
+        "prompt": "How is your usual appetite and capacity for food?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_vyayama_shakti",
+        "section": "dashavidha_pariksha",
+        "prompt": "How much physical activity or exercise can you usually tolerate?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "ayush_vaya",
+        "section": "dashavidha_pariksha",
+        "prompt": "Which life stage best describes you?",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["child", "young_adult", "adult", "older_adult", "prefer_not_to_say"],
+    },
+    {
+        "key": "ayush_ahara",
+        "section": "lifestyle_context",
+        "prompt": "Please describe your usual diet and recent dietary changes.",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "ayush_vihara",
+        "section": "lifestyle_context",
+        "prompt": "Please describe your sleep, daily routine, and activity pattern.",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "ayush_agni",
+        "section": "lifestyle_context",
+        "prompt": "How would you describe your digestion currently?",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["regular", "reduced", "irregular", "increased", "not_sure"],
+    },
+    {
+        "key": "ayush_koshtha",
+        "section": "lifestyle_context",
+        "prompt": "How would you describe your usual bowel pattern?",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["regular", "constipation_tendency", "loose_stools_tendency", "variable", "not_sure"],
+    },
+    {
+        "key": "ayush_nidana",
+        "section": "lifestyle_context",
+        "prompt": "What factors do you think may be related to your current concern?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+]
+
+PATHWAYS: dict[str, list[dict[str, Any]]] = {
+    CHEST_PATHWAY_VERSION: CHEST_QUESTIONS,
+    AYUSH_PATHWAY_VERSION: AYUSH_QUESTIONS,
+}
+
+
+def is_supported_pathway(pathway_version: str) -> bool:
+    return pathway_version in PATHWAYS
+
+
+def active_questions(pathway_version: str, answers: dict[str, Any]) -> list[dict[str, Any]]:
+    questions = PATHWAYS.get(pathway_version)
+    if questions is None:
+        return []
     result = []
-    for question in QUESTIONS:
+    for question in questions:
         condition = question.get("when")
         if condition and any(answers.get(key) != value for key, value in condition.items()):
             continue

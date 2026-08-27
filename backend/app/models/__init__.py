@@ -1,4 +1,5 @@
 from app.models.entities import (
+    AssistiveArtifact,
     AuditEvent,
     ClinicalFact,
     Consent,
@@ -15,6 +16,6 @@ from app.models.entities import (
 )
 
 __all__ = [
-    "AuditEvent", "ClinicalFact", "Consent", "Document", "Encounter", "FhirExport", "Patient",
+    "AssistiveArtifact", "AuditEvent", "ClinicalFact", "Consent", "Document", "Encounter", "FhirExport", "Patient",
     "PatientResponse", "PhysicianRevision", "RedFlag", "RevokedToken", "Summary", "User",
 ]

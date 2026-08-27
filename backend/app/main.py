@@ -7,7 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import select, text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import get_settings
@@ -16,7 +16,7 @@ from app.core.errors import DomainError, domain_error_handler
 from app.core.security import hash_password
 from app.models import User  # ensures all models register with Base metadata
 from app.models.entities import UserRole
-from app.routers import auth, clinical, documents, encounters, fhir, health, intake, summaries
+from app.routers import assistive, auth, clinical, documents, encounters, fhir, health, intake, summaries
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,11 +38,26 @@ async def ensure_bootstrap_admin() -> None:
             logger.warning("Created bootstrap administrator; rotate BOOTSTRAP_ADMIN_PASSWORD before shared use.")
 
 
+async def apply_development_schema_repairs() -> None:
+    """Idempotent compatibility repair for the existing hackathon development database.
+
+    Formal Alembic migrations remain required before a production deployment. This repair lets a
+    developer container safely widen the existing FHIR status column after an application upgrade.
+    """
+    if not settings.auto_create_schema:
+        return
+    async with engine.begin() as connection:
+        await connection.execute(
+            text("ALTER TABLE IF EXISTS fhir_exports ALTER COLUMN validation_status TYPE VARCHAR(64)")
+        )
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if settings.auto_create_schema:
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
+    await apply_development_schema_repairs()
     await ensure_bootstrap_admin()
     yield
     await engine.dispose()
@@ -126,5 +141,6 @@ app.include_router(clinical.triage_router, prefix=settings.api_v1_prefix)
 app.include_router(clinical.red_flag_router, prefix=settings.api_v1_prefix)
 app.include_router(clinical.clinician_router, prefix=settings.api_v1_prefix)
 app.include_router(documents.router, prefix=settings.api_v1_prefix)
+app.include_router(assistive.router, prefix=settings.api_v1_prefix)
 app.include_router(summaries.router, prefix=settings.api_v1_prefix)
 app.include_router(fhir.router, prefix=settings.api_v1_prefix)

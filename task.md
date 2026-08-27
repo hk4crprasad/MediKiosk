@@ -13,9 +13,10 @@
 | [X] | B1 — Auth, encounter, consent, RBAC | Implemented | User reports tested | A-01–A-04, E-01–E-02, C-01–C-03 |
 | [X] | B2 — Controlled intake and clinical facts | Accepted | User reports pass | I-01–I-04 |
 | [X] | B3 — Safety/triage/clinician review | Accepted | User approved continuation | T-01–T-02, R-01 |
-| [ ] | B4 — Azure Blob documents | Azure configured; user acceptance pending | Pending | D-01–D-04 |
-| [ ] | B5 — Summary/physician verification | GPT-5.6 Luna configuration reported; user acceptance pending | Pending | S-01–S-04 |
-| [ ] | B6 — Local FHIR export | Scaffolded; not accepted | Pending | F-01–F-02 |
+| [X] | B4 — Azure Blob documents | Accepted | User reported all current checks complete | D-01–D-04 |
+| [X] | B5 — Summary/physician verification | Accepted | User reported all current checks complete | S-01–S-04 |
+| [X] | B6 — Local FHIR export | Accepted | User reported all current checks complete | F-01–F-02 |
+| [X] | AYU — Dashavidha intake | Accepted | User reports pass | AYU-01–AYU-05 |
 
 **Meaning of `scaffolded`:** endpoint code exists but it has not passed its slice’s user-operated Postman acceptance gate and must not be described as complete.
 
@@ -68,7 +69,7 @@
 | [X] | B4-03 | Persist a private Azure Blob key and document metadata | Backend | Implemented; Azure configuration and user verification pending | API returns no filesystem path/public Azure URL |
 | [X] | B4-04 | Stream source evidence from private Azure Blob storage after authorisation | Backend | Implemented; Azure configuration and user verification pending | D-04 opens/downloads only the current encounter’s original synthetic file |
 | [X] | B4-05 | Configure Azure Blob Storage | User/DevOps | Reported configured | Private container exists and `backend/.env` has a valid connection string; no secret is committed |
-| [ ] | B4-06 | User acceptance gate | User | Pending | User runs D-01–D-04 and negative access/content tests against Azure Blob Storage |
+| [X] | B4-06 | User acceptance gate | User | Pass | User reported current acceptance checks complete |
 | [ ] | B4-07 | Re-upload or migrate any prior local development documents | User/DevOps | Pending if documents already exist | Existing records point to the retired local adapter and are not treated as Azure-backed evidence |
 
 ## B5 preparation — OpenAI-Compatible Generation
@@ -79,28 +80,78 @@
 | [X] | B5-02 | Generate strict JSON clinician draft from saved facts | Backend | Implemented; pending user verification | Provider response is schema-valid JSON and source/prompt version are recorded |
 | [X] | B5-03 | Preserve deterministic fallback | Backend | Implemented; pending user verification | Missing/failed provider produces `template` or `template_fallback`, not an API crash |
 | [X] | B5-04 | Physician edit and explicit verification | Backend | Implemented; pending user verification | S-03/S-04 create revision/audit and mark only accepted material verified |
-| [ ] | B5-05 | User acceptance gate | User | Pending | User runs S-01–S-04 with configured provider and fallback scenario |
+| [X] | B5-05 | User acceptance gate | User | Pass | User reported current acceptance checks complete |
 | [X] | B5-06 | Preserve GPT-5.6 Luna parameter compatibility | Backend | Implemented; pending user verification | SDK call sends neither `temperature` nor `max_tokens` |
+
+## B5 user test checklist — Postman
+
+- [X] S-01 generates a provider-backed draft with `source=openai_compatible` and `prompt_version=openai-compatible-summary-v1`.
+- [X] S-02 retrieves the same latest draft for authorised staff only.
+- [X] S-03 saves a physician edit and records the revision/audit event.
+- [X] S-04 accepts or rejects explicitly; acceptance changes the encounter to `VERIFIED`.
+- [X] Fallback check: temporarily use an invalid provider setting and confirm `source=template_fallback` rather than a server error, then restore the valid setting.
+- [X] Clinical review: verify every generated clinical statement is supported by the structured facts; no diagnosis, treatment, or invented medication/allergy/red-flag appears.
 
 ## B4 user test checklist — Postman
 
-- [ ] D-01 accepts one valid synthetic PDF/JPEG/PNG with active consent.
-- [ ] D-01 rejects no consent, revoked consent, unsupported type, oversize file, and MIME/signature mismatch.
-- [ ] D-02 lists only the target encounter’s metadata and no physical storage path.
-- [ ] D-03 returns metadata only when authorised.
-- [ ] D-04 opens/downloads the original synthetic file with correct content type when authorised.
-- [ ] A kiosk token for another encounter is denied for D-03/D-04.
+- [X] D-01 accepts one valid synthetic PDF/JPEG/PNG with active consent.
+- [X] D-01 rejects no consent, revoked consent, unsupported type, oversize file, and MIME/signature mismatch.
+- [X] D-02 lists only the target encounter’s metadata and no physical storage path.
+- [X] D-03 returns metadata only when authorised.
+- [X] D-04 opens/downloads the original synthetic file with correct content type when authorised.
+- [X] A kiosk token for another encounter is denied for D-03/D-04.
+
+## Active task — AYUSH Dashavidha Intake
+
+| Done | ID | Task | Owner | Status | Done when |
+| --- | --- | --- | --- | --- | --- |
+| [X] | AYU-01 | Add server-controlled `ayush-dashavidha-v1` pathway | Backend | Implemented; pending user verification | Only supported versions can create an encounter; unknown versions return a safe validation response |
+| [X] | AYU-02 | Capture Dashavidha and lifestyle context as evidence-linked `ayush_*` facts | Backend | Implemented; pending user verification | Prakriti through Vaya plus Ahara, Vihara, Agni, Koshtha, and Nidana preserve patient-reported values |
+| [X] | AYU-03 | Keep chest safety rules isolated from AYUSH intake | Backend | Implemented; pending user verification | An AYUSH encounter does not run the chest-discomfort/breathlessness rule |
+| [X] | AYU-04 | Add AYUSH-aware draft-summary content | Backend | Implemented; pending user verification | AYUSH-only intake produces only `ayush_assessment` content, pending clinician review |
+| [X] | AYU-05 | Add Postman collection requests and manual acceptance instructions | Backend | Implemented; pending user verification | Collection includes create, consent, every configured response, facts, submission, and summary checks |
+| [X] | AYU-06 | User acceptance gate | User | Pass | User reported all AYUSH checks pass |
+
+## AYUSH user test checklist — Postman
+
+- [X] AYU-01 creates an encounter with `pathway_version=ayush-dashavidha-v1`; an unknown pathway version is rejected with 422.
+- [X] AYU-02 requires active clinical-intake consent before the pathway can be answered.
+- [X] AYU-03 returns the configured Dashavidha question sequence, beginning with `ayush_prakriti`.
+- [X] AYU-04 saves every Dashavidha/lifestyle answer as a patient-confirmed `ayush_*` fact, rejects out-of-sequence keys, and enforces allowed choices for Vaya, Agni, and Koshtha.
+- [X] AYU-05 rejects submit when any required AYUSH field is absent, accepts it when complete, and returns no chest-specific red flag for the AYUSH encounter.
+- [ ] Optional summary check: B5 S-01 returns `content.ayush_assessment`, does not invent a diagnosis/treatment, and contains no uncaptured chest-pathway field.
+
+## Active task — INT Assistive Adapter Contracts
+
+| Done | ID | Task | Owner | Status | Done when |
+| --- | --- | --- | --- | --- | --- |
+| [X] | INT-01 | Add encounter-scoped speech transcription contract | Backend | Implemented; pending user verification | Active consent and scoped access are required; `AsyncOpenAI` transcription is evidence only |
+| [X] | INT-02 | Add document-scoped OCR extraction contract | Backend | Implemented; pending user verification | A mock result preserves document provenance, confidence, raw text, and structured entities |
+| [X] | INT-03 | Add deterministic mock and disabled fallback modes | Backend | Implemented; pending user verification | `mock` returns labelled synthetic fixtures; `disabled` returns safe 503 without persisting output |
+| [X] | INT-04 | Preserve the verification boundary | Backend | Implemented; pending user verification | No adapter request creates a patient response, clinical fact, diagnosis, or verified data |
+| [X] | INT-05 | Add PRD, configuration template, and Postman contract | Backend | Implemented; pending user verification | PRD/07, `.env.example`, and Postman cover the manual gates |
+| [X] | INT-06 | Add protected OpenAI-compatible TTS of the configured next question | Backend | Implemented; pending user verification | TTS never accepts arbitrary/generated text and streams WAV for only the next configured question |
+| [ ] | INT-07 | User acceptance gate | User | Pending | User runs INT-01–INT-05 and reports results |
+
+## INT user test checklist — Postman
+
+- [ ] Set `SPEECH_ADAPTER_MODE=openai_compatible`; keep `LLM_BASE_URL`/`LLM_API_KEY` pointed at the Azure OpenAI-compatible `/openai/v1` endpoint/key; set the STT/TTS deployment names; rebuild the API.
+- [ ] INT-01 requires active consent and the current encounter token; returns a labelled `openai_compatible` transcription with language and creates no patient response or clinical fact.
+- [ ] INT-02 returns a labelled `mock` extraction linked to the selected document, with raw text, entities, confidence, and `requires_clinician_verification=true`; it creates no clinical fact.
+- [ ] INT-03 returns only the selected document's latest extraction and denies a different encounter token.
+- [ ] Set `SPEECH_ADAPTER_MODE=disabled`, rebuild, and run INT-04. It returns `503 speech_adapter_unavailable`, persists no output, and touch intake remains the fallback.
+- [ ] INT-05 streams WAV audio and returns the current server-configured question key. It cannot receive arbitrary text, a summary, or a provider-generated prompt.
 
 ## Backlog after B4 acceptance
 
 | Done | Priority | ID | Task | Acceptance gate |
 | --- | --- | --- | --- | --- |
 | [X] | P0 | B3-01 | Deterministic red-flag rule, evidence, triage queue, acknowledgement | T-01, T-02, R-01 |
-| [ ] | P0 | B4-01 | Secure document lifecycle: synthetic upload, scoped metadata, storage failure behavior | D-01–D-04 |
-| [ ] | P0 | B5-01 | Structured/template summary, physician edits and explicit verification | S-01–S-04 |
-| [ ] | P1 | B6-01 | Clinician-verified fact mapping and local FHIR validation/export | F-01–F-02 |
-| [ ] | P1 | AYU-01 | AYUSH-specific versioned intake pathway and clinical facts | New Postman folder and user gate required |
-| [ ] | P1 | INT-01 | Speech/OCR/LLM adapter contracts plus safe mock/fallback behavior | New Postman folder and user gate required |
+| [X] | P0 | B4-01 | Secure document lifecycle: synthetic upload, scoped metadata, storage failure behavior | D-01–D-04 |
+| [X] | P0 | B5-01 | Structured/template summary, physician edits and explicit verification | S-01–S-04 |
+| [X] | P1 | B6-01 | Clinician-verified fact mapping and local FHIR validation/export | F-01–F-02 |
+| [X] | P1 | AYU-01 | AYUSH-specific versioned intake pathway and clinical facts | AYU-01–AYU-05 |
+| [ ] | P1 | INT-01 | Speech/OCR adapter contracts plus safe mock/fallback behavior | INT-01–INT-04 |
 | [ ] | P1 | OPS-01 | Alembic migrations, private object storage, rate limiting, token cleanup | Deployment review |
 | [ ] | P1 | OPS-02 | VPS, Nginx, HTTPS, backup/restore, monitoring | Deployment review |
 
@@ -111,7 +162,7 @@
 | D-01 | Initial complaint pathway is `chest-discomfort-v1` | Product/clinical | Active MVP default |
 | D-02 | Only user-run Postman tests are accepted as API evidence | User | Active |
 | D-03 | Synthetic demo data only | All | Active |
-| D-04 | Azure Blob Storage selected for document binaries; connection string and private container configuration are required before B4 testing | User/DevOps | Open |
+| D-04 | Azure Blob Storage selected for document binaries; private-container configuration used for B4 acceptance | User/DevOps | Active |
 | D-05 | No provider credentials/clinical policy for live speech, OCR, LLM, or ABDM sandbox have been supplied | User/Product | Open |
 
 ## Acceptance history
@@ -122,6 +173,13 @@
 | 2026-08-27 | B2 | Pass | User | User reported pass; advance approved. |
 | 2026-08-27 | B3 | Pass | User | User approved continuation. |
 | 2026-08-27 | Azure Blob / GPT-5.6 Luna configuration | Reported configured | User | Server secrets remain outside the repository and Postman. |
+| 2026-08-27 | B4 D-01 | Failed, dependency corrected | User/Codex | Async Azure transport required `aiohttp`; dependency added. User retest required. |
+| 2026-08-27 | B5 S-01 | Failed, route collision corrected | User/Codex | Summary route recursively called itself instead of the generation service; dependency injection did not occur. User retest required. |
+| 2026-08-27 | B5 S-01 retry | Pass | User | Provider-backed draft returned with `source=openai_compatible` and prompt version `openai-compatible-summary-v1`. |
+| 2026-08-27 | B6 F-01 | Failed, schema repair added | User/Codex | FHIR validation status exceeded the old 32-character database column; widened to 64 on development startup. User retest required. |
+| 2026-08-27 | B4/B5/B6 | Pass | User | User reported all current checks complete and approved progression to the AYUSH slice. |
+| 2026-08-27 | AYU-03 | Failed, deployment refresh required | User/Codex | `GET /intake/next-question` returned 409 for the AYUSH encounter. The Docker API image has no source bind mount, so it must be rebuilt to include the new pathway registry; user retest required. |
+| 2026-08-27 | AYUSH AYU-01–AYU-05 | Pass | User | User reported all current AYUSH checks pass. |
 
 ## Update protocol
 

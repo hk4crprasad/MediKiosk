@@ -12,6 +12,8 @@ This folder is the entry point for product and delivery decisions. It avoids hav
 | [`04_MediKiosk_Testing_and_Acceptance_Strategy.md`](../04_MediKiosk_Testing_and_Acceptance_Strategy.md) | Acceptance criteria and user-operated API test policy | Active |
 | [`05_MediKiosk_Hackathon_Build_Demo_and_Execution_Plan.md`](../05_MediKiosk_Hackathon_Build_Demo_and_Execution_Plan.md) | Build/demo delivery plan | Active |
 | [`00_MediKiosk_Pre_Development_FastAPI_Plan.md`](../00_MediKiosk_Pre_Development_FastAPI_Plan.md) | FastAPI delivery slices, API contract, and Postman gates | Active |
+| [`06_MediKiosk_AYUSH_Dashavidha_MVP_Requirements.md`](06_MediKiosk_AYUSH_Dashavidha_MVP_Requirements.md) | Versioned AYUSH Dashavidha intake scope, safety boundary, and acceptance criteria | Implemented; user acceptance pending |
+| [`07_MediKiosk_Assistive_Adapters_MVP_Requirements.md`](07_MediKiosk_Assistive_Adapters_MVP_Requirements.md) | Speech/OCR adapter contracts, mock fallback, provenance, and safety boundary | Implemented; user acceptance pending |
 
 ## Operating rules
 

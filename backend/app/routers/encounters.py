@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.security import Principal, create_token, get_principal
+from app.clinical_config.pathways import is_supported_pathway
 from app.models import Consent, Encounter, Patient
 from app.models.entities import EncounterStatus
 from app.schemas.encounters import (
@@ -28,6 +29,11 @@ router = APIRouter(prefix="/encounters", tags=["encounters"])
 async def create_encounter(
     payload: EncounterCreateRequest, request: Request, session: AsyncSession = Depends(get_session)
 ) -> EncounterCreatedResponse:
+    if not is_supported_pathway(payload.pathway_version):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"message": "Unsupported pathway version", "supported_pathway_versions": ["chest-discomfort-v1", "ayush-dashavidha-v1"]},
+        )
     patient = Patient(**payload.patient.model_dump())
     session.add(patient)
     await session.flush()

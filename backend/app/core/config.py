@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     llm_api_key: str | None = None
     llm_model: str = "gpt-5.6-luna"
     llm_timeout_seconds: float = 30.0
+    speech_adapter_mode: str = "disabled"
+    ocr_adapter_mode: str = "disabled"
+    azure_openai_stt_deployment: str | None = None
+    azure_openai_tts_deployment: str | None = None
+    azure_openai_tts_voice: str = "alloy"
     max_upload_bytes: int = 10 * 1024 * 1024
     auto_create_schema: bool = False
     bootstrap_admin_email: str = "admin@medikiosk.local"

@@ -13,6 +13,19 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
         )
     ).all()
     values = {fact.fact_type: fact.value.get("value") for fact in facts}
+    ayush_values = {key.removeprefix("ayush_"): value for key, value in values.items() if key.startswith("ayush_")}
+    chest_pathway_values_present = any(
+        key in values
+        for key in ("chief_complaint", "onset_duration", "breathlessness", "sweating", "allergies", "current_medications")
+    )
+    if ayush_values and not chest_pathway_values_present:
+        ayush_text = "; ".join(
+            f"{key.replace('_', ' ')}: {value if value is not None else 'Not captured'}"
+            for key, value in ayush_values.items()
+        )
+        content = {"ayush_assessment": ayush_values}
+        return content, f"AYUSH intake (patient-reported, pending clinician review): {ayush_text}."
+
     content = {
         "chief_complaint": values.get("chief_complaint", "Not captured"),
         "onset_duration": values.get("onset_duration", "Not captured"),
@@ -23,6 +36,9 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
         "allergies": values.get("allergies", "Not captured"),
         "current_medications": values.get("current_medications", "Not captured"),
     }
+    if ayush_values:
+        content["ayush_assessment"] = ayush_values
+
     text = (
         f"Chief complaint: {content['chief_complaint']}. "
         f"Onset/duration: {content['onset_duration']}. "
@@ -31,6 +47,12 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
         f"Allergies: {content['allergies']}. "
         f"Current medications: {content['current_medications']}."
     )
+    if ayush_values:
+        ayush_text = "; ".join(
+            f"{key.replace('_', ' ')}: {value if value is not None else 'Not captured'}"
+            for key, value in ayush_values.items()
+        )
+        text = f"{text} AYUSH intake: {ayush_text}."
     return content, text
 
 
