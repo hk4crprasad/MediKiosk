@@ -1,6 +1,4 @@
-# Local secrets and runtime configuration
-backend/.env
-.env
+
 
 # Local Firecrawl search/parse cache
 .firecrawl/
