@@ -182,7 +182,7 @@
       "item": [
         {
           "name": "S-01 POST /summary/generations",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "Server prerequisite: LLM_BASE_URL and LLM_API_KEY are present only in backend/.env; never put them in Postman. Expected configured-provider result: source=openai_compatible, prompt_version=openai-compatible-summary-v1, and gpt-5.6-luna receives no temperature/max_tokens parameters. Expected degraded result: source=template_fallback. User checks that uncaptured facts are Not captured rather than invented." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "Server prerequisite: LLM_BASE_URL and LLM_API_KEY are present only in backend/.env; never put them in Postman. Expected configured-provider result: source=openai_compatible, prompt_version=openai-compatible-summary-v1, prompt_metadata with prompt ID/version/SHA-256, and gpt-5.6-luna receives no temperature/max_tokens parameters. Expected degraded result: source=template_fallback. User checks that uncaptured facts are Not captured rather than invented." },
           "response": []
         },
         {
@@ -311,8 +311,8 @@
           "response": []
         },
         {
-          "name": "INT-02 POST /documents/{document_id}/extractions — synthetic mock",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"fixture_id\": \"printed_lab_report_v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions", "description": "Prerequisite: document_id is a synthetic B4 upload for this encounter. Set OCR_ADAPTER_MODE=mock and rebuild. User verifies document_id, provider=mock, confidence, raw extraction, structured entities, and requires_clinician_verification=true. It must not create a clinical fact." },
+          "name": "INT-02 POST /documents/{document_id}/extractions — Luna vision",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions", "description": "Prerequisite: document_id is a synthetic JPEG/PNG B4 upload for this encounter. Set OCR_ADAPTER_MODE=openai_compatible; LLM_BASE_URL/LLM_API_KEY and LLM_MODEL=gpt-5.6-luna are reused through AsyncOpenAI. Rebuild. User verifies provider=openai_compatible_vision, document provenance, extracted text, entities, requires_clinician_verification=true, and no clinical fact. PDF returns a safe 422 manual-review response in this MVP." },
           "response": []
         },
         {

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "vision-001",
+    "prompt_task": "document_extraction",
+    "fixture_description": "Synthetic printed lab image containing Haemoglobin: 13.2 g/dL",
+    "must_extract_visible_text": ["Haemoglobin", "13.2 g/dL"],
+    "must_not_infer": ["normal", "abnormal", "diagnosis", "treatment"]
+  },
+  {
+    "id": "vision-002",
+    "prompt_task": "document_extraction",
+    "fixture_description": "Synthetic unreadable handwriting image",
+    "must_not_infer": ["medicine name", "dose", "frequency", "diagnosis"]
+  }
+]

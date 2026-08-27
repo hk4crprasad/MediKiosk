@@ -50,6 +50,9 @@ async def apply_development_schema_repairs() -> None:
         await connection.execute(
             text("ALTER TABLE IF EXISTS fhir_exports ALTER COLUMN validation_status TYPE VARCHAR(64)")
         )
+        await connection.execute(
+            text("ALTER TABLE IF EXISTS summaries ADD COLUMN IF NOT EXISTS prompt_metadata JSONB NOT NULL DEFAULT '{}'::jsonb")
+        )
 
 
 @asynccontextmanager

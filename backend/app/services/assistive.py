@@ -1,9 +1,12 @@
+import base64
 from dataclasses import dataclass
 
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
+from pydantic import BaseModel, Field, ValidationError
 
 from app.core.config import Settings
 from app.core.errors import DomainError
+from app.prompting.registry import get_prompt
 
 
 @dataclass(frozen=True)
@@ -13,6 +16,16 @@ class AdapterOutput:
     confidence: float | None
     language: str | None = None
     provider: str = "mock"
+
+
+class ExtractedEntity(BaseModel):
+    entity_type: str = Field(min_length=1, max_length=64)
+    text: str = Field(min_length=1, max_length=1000)
+
+
+class VisionExtraction(BaseModel):
+    extracted_text: str = Field(min_length=1, max_length=20000)
+    entities: list[ExtractedEntity] = Field(default_factory=list, max_length=100)
 
 
 SPEECH_FIXTURES = {
@@ -175,6 +188,68 @@ class OpenAICompatibleSpeechAdapter:
             raise DomainError(
                 code="tts_adapter_unavailable",
                 message="OpenAI-compatible text-to-speech is unavailable; display the prompt as text.",
+                status_code=503,
+            ) from exc
+        finally:
+            await client.close()
+
+
+class OpenAICompatibleVisionExtractor:
+    """Image extraction through AsyncOpenAI; extracted content remains unverified evidence."""
+
+    def __init__(self, settings: Settings):
+        self._settings = settings
+
+    @property
+    def configured(self) -> bool:
+        return bool(self._settings.llm_base_url and self._settings.llm_api_key and self._settings.llm_model)
+
+    async def extract_image(self, content: bytes, mime_type: str, document_type: str) -> AdapterOutput:
+        if not self.configured:
+            raise DomainError(
+                code="vision_extraction_unavailable",
+                message="OpenAI-compatible vision extraction is not configured; use manual review.",
+                status_code=503,
+            )
+        image_data_url = f"data:{mime_type};base64,{base64.b64encode(content).decode('ascii')}"
+        prompt = get_prompt("document_extraction")
+        client = AsyncOpenAI(
+            base_url=self._settings.llm_base_url,
+            api_key=self._settings.llm_api_key,
+            timeout=self._settings.llm_timeout_seconds,
+        )
+        try:
+            response = await client.chat.completions.create(
+                model=self._settings.llm_model,
+                messages=[
+                    {"role": "system", "content": prompt.text},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": f"Document type: {document_type}. Extract the visible text."},
+                            {"type": "image_url", "image_url": {"url": image_data_url}},
+                        ],
+                    },
+                ],
+            )
+            response_text = response.choices[0].message.content
+            if not isinstance(response_text, str):
+                raise ValueError("Vision provider response content is not text")
+            extraction = VisionExtraction.model_validate_json(response_text)
+            return AdapterOutput(
+                raw_text=extraction.extracted_text,
+                structured_data={
+                    "entities": [entity.model_dump() for entity in extraction.entities],
+                    "requires_clinician_verification": True,
+                    "prompt": prompt.metadata,
+                },
+                confidence=None,
+                provider="openai_compatible_vision",
+            )
+        except (APIError, APIConnectionError, APITimeoutError, IndexError, TypeError, ValueError, ValidationError) as exc:
+            raise DomainError(
+                code="vision_extraction_unavailable",
+                message="OpenAI-compatible vision extraction is unavailable or returned invalid output; use manual review.",
                 status_code=503,
             ) from exc
         finally:

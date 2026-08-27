@@ -14,7 +14,7 @@ Provide replaceable API boundaries for speech-to-text and OCR/document extractio
 | --- | --- | --- |
 | INT-01 | Speech transcriptions are encounter-scoped and require active clinical-intake consent. | Authorised callers can request a configured OpenAI-compatible transcription; missing/revoked consent and other encounter tokens are denied. |
 | INT-02 | Speech output is evidence only. | A transcription returns transcript, language, confidence, provider, and status, but creates no patient response or clinical fact. |
-| INT-03 | OCR extraction is document-scoped and preserves provenance. | A configured mock extraction persists raw extracted text, structured entities, provider, confidence, and document reference. |
+| INT-03 | Vision extraction is document-scoped and preserves provenance. | Luna receives only a private JPEG/PNG image through the OpenAI-compatible adapter; raw extracted text, entities, provider, and document reference are persisted as unverified evidence. |
 | INT-04 | OCR output is unverified and cannot directly enter a summary or FHIR export. | No `ClinicalFact` is created from an extraction; clinician verification remains a separate workflow. |
 | INT-05 | Provider state is explicit and safe. | `disabled` returns a clear 503 fallback message without persisting made-up output; `mock` returns only deterministic synthetic fixture data. |
 | INT-06 | Text-to-speech may only render a server-configured next question. | The TTS endpoint returns audio for the current configured question and accepts no arbitrary/generated text. |
@@ -30,8 +30,9 @@ Provide replaceable API boundaries for speech-to-text and OCR/document extractio
 ## Configuration
 
 - `SPEECH_ADAPTER_MODE=disabled|mock|openai_compatible` (default `disabled`)
-- `OCR_ADAPTER_MODE=disabled|mock` (default `disabled`)
+- `OCR_ADAPTER_MODE=disabled|mock|openai_compatible` (default `disabled`)
 - In `openai_compatible` mode, STT/TTS reuse `LLM_BASE_URL` and `LLM_API_KEY` through the official `AsyncOpenAI` SDK. Azure deployment names are passed as the SDK `model` values.
+- Vision extraction uses the same `AsyncOpenAI` client and `LLM_MODEL` (`gpt-5.6-luna`). Only JPEG and PNG document bytes are supplied as an image data URL; PDFs require manual review in this MVP.
 
 The `mock` mode exists solely for a deterministic synthetic hackathon demo. Provider credentials never belong in Postman.
 

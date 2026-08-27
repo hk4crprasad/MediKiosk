@@ -190,6 +190,7 @@ class Summary(TimestampedModel, Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str] = mapped_column(String(32), default="template", nullable=False)
     prompt_version: Mapped[str | None] = mapped_column(String(64))
+    prompt_metadata: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
     status: Mapped[SummaryStatus] = mapped_column(Enum(SummaryStatus), default=SummaryStatus.draft, nullable=False)
 
 

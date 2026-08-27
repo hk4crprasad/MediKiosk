@@ -5,9 +5,10 @@ from openai import APIError, APITimeoutError, AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
 from app.core.config import Settings
+from app.prompting.registry import get_prompt
 
 logger = logging.getLogger(__name__)
-PROMPT_VERSION = "openai-compatible-summary-v1"
+PROMPT_VERSION = get_prompt("summary").version
 
 
 class GeneratedSummary(BaseModel):
@@ -30,12 +31,7 @@ class OpenAICompatibleSummaryGenerator:
     async def generate(self, structured_facts: dict) -> GeneratedSummary:
         if not self.configured:
             raise RuntimeError("OpenAI-compatible generation is not configured")
-        system_prompt = (
-            "You draft a clinician review summary for a pre-consultation intake system. "
-            "Use only the supplied structured facts. Never diagnose, prescribe, recommend treatment, "
-            "or infer absent facts. State missing information as 'Not captured'. "
-            "Return valid JSON only, exactly: {\"summary_text\": \"...\"}."
-        )
+        system_prompt = get_prompt("summary").text
         client = AsyncOpenAI(api_key=self._api_key, base_url=self._base_url, timeout=self._timeout)
         try:
             response = await client.chat.completions.create(

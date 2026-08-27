@@ -35,7 +35,14 @@ async def generate_summary(
 ) -> SummaryResponse:
     await get_encounter_or_404(session, encounter_id)
     summary = await generate_summary_draft(session, encounter_id)
-    await write_audit(session, "summary.generated", actor_id=principal.subject, encounter_id=encounter_id, request=request)
+    await write_audit(
+        session,
+        "summary.generated",
+        actor_id=principal.subject,
+        encounter_id=encounter_id,
+        request=request,
+        metadata={"summary_id": str(summary.id), **summary.prompt_metadata},
+    )
     await session.commit()
     await session.refresh(summary)
     return SummaryResponse.model_validate(summary)

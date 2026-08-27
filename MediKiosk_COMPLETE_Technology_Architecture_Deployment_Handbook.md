@@ -260,6 +260,35 @@ The purpose of the hackathon system is to **prove the clinical intake concept sa
 
 ---
 
+## 4.1 Specified vs used — current FastAPI-first MVP
+
+This table is the implementation reconciliation for the current repository. The surrounding handbook remains the target architecture; an item marked **planned** is not to be represented as delivered.
+
+| Capability | Handbook specified | Currently used / status | Deliberate MVP variance or remaining work |
+|---|---|---|---|
+| Backend core | FastAPI, Pydantic, SQLAlchemy, PostgreSQL | **Used and user-accepted**: auth/RBAC, consent, encounter lifecycle, controlled intake, clinical facts, red-flag triage, physician review, audit, summary and local FHIR export | Production migrations, rate limits, cleanup jobs, and automated test suite remain open. |
+| Object storage | Azure Blob Storage | **Used and user-accepted** for private document upload/download and metadata | Existing local-development documents, if any, must be migrated/re-uploaded. |
+| Primary LLM | GPT-5.6-luna through Azure OpenAI/Foundry | **Used** through the official `AsyncOpenAI` SDK against the configured OpenAI-compatible `/openai/v1` base URL | Versioned prompt registry, evaluation corpus, and prompt hashes remain open. |
+| STT | Azure Speech | **Implemented; pending user Postman acceptance** with `gpt-4o-mini-transcribe` through the same direct `AsyncOpenAI` client | This intentionally replaces the original Azure Speech adapter for the hackathon. It still requires synthetic-audio quality checks, read-back UI, and Hindi validation. |
+| TTS | Azure Speech TTS | **Implemented; pending user Postman acceptance** with `gpt-4o-mini-tts` through `AsyncOpenAI` | TTS is constrained to the server-configured next question; it cannot speak arbitrary or generated clinical content. |
+| Document extraction | Azure Document Intelligence v4 then Luna semantic extraction | **Implemented; pending user Postman acceptance** with `gpt-5.6-luna` vision for private JPEG/PNG documents | This intentionally replaces Document Intelligence for the MVP. PDF OCR, layout/bounding boxes, OCR confidence, entity normalization, and timeline placement remain open. |
+| Clinical workflow | Multiple complaint pathways plus safety rules | **Partially used**: controlled chest-discomfort pathway, one deterministic urgent rule, and AYUSH Dashavidha pathway are accepted | Broader general history and the abdominal-pain, fever, and headache pathways remain open. |
+| Frontend | Next.js patient, physician, and triage applications | **Not present in this repository** | Required for the complete product/demo experience, language selection, accessibility, read-back, and timeline display. |
+| Deployment | VPS, Nginx, HTTPS, Certbot, backups, observability, CI/CD | **Not implemented**; local Docker Compose exists | Required before a public demo or production-like deployment. |
+| Interoperability | FHIR R4 mapper, validation, optional ABDM/HIS sandbox adapter | **Partially used**: local FHIR bundle and local structural validation are accepted | Verified-only mapping policy refinement and real ABDM/HIS sandbox connection remain open. |
+
+### MVP adapter decision
+
+The active MVP uses the official OpenAI Python SDK directly:
+
+```text
+AsyncOpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
+```
+
+`LLM_BASE_URL` is the Azure OpenAI-compatible `/openai/v1` endpoint. The model/deployment names are `gpt-5.6-luna`, `gpt-4o-mini-transcribe`, and `gpt-4o-mini-tts`. This is an intentional hackathon decision, not a claim that Azure Speech or Azure Document Intelligence has been deployed.
+
+---
+
 # 5. Architecture Overview
 
 ```mermaid

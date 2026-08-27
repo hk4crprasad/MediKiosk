@@ -14,6 +14,7 @@ class SummaryResponse(BaseModel):
     text: str
     source: str
     prompt_version: str | None
+    prompt_metadata: dict
     status: SummaryStatus
     created_at: datetime
 

@@ -1,5 +1,6 @@
 from app.core.config import get_settings
 from app.services.openai_compatible import OpenAICompatibleSummaryGenerator, PROMPT_VERSION
+from app.prompting.registry import get_prompt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,6 +60,7 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
 async def generate_summary(session: AsyncSession, encounter_id) -> Summary:
     content, template_text = await build_summary_content(session, encounter_id)
     generator = OpenAICompatibleSummaryGenerator(get_settings())
+    prompt = get_prompt("summary")
     source = "template"
     prompt_version = None
     summary_text = template_text
@@ -77,6 +79,7 @@ async def generate_summary(session: AsyncSession, encounter_id) -> Summary:
         text=summary_text,
         source=source,
         prompt_version=prompt_version,
+        prompt_metadata=prompt.metadata,
     )
     session.add(summary)
     return summary

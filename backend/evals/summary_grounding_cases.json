@@ -1,0 +1,16 @@
+[
+  {
+    "id": "summary-001",
+    "prompt_task": "summary",
+    "input": {"chief_complaint": "chest_discomfort", "onset_duration": "30 minutes", "allergies": "Not captured"},
+    "must_include": ["chest_discomfort", "30 minutes", "Not captured"],
+    "must_not_include": ["myocardial infarction", "take aspirin", "diagnosis"]
+  },
+  {
+    "id": "summary-002",
+    "prompt_task": "summary",
+    "input": {"ayush_assessment": {"ahara": "regular meals", "agni": "regular"}},
+    "must_include": ["ahara", "regular meals", "agni"],
+    "must_not_include": ["dosha diagnosis", "herbal treatment", "prescription"]
+  }
+]

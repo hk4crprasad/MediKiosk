@@ -13,9 +13,15 @@ from app.models import AssistiveArtifact, Document
 from app.models.entities import DocumentStatus
 from app.schemas.assistive import AssistiveArtifactResponse, DocumentExtractionRequest
 from app.services.access import ensure_encounter_access, get_encounter_or_404
-from app.services.assistive import OpenAICompatibleSpeechAdapter, mock_document_extraction, mock_transcription
+from app.services.assistive import (
+    OpenAICompatibleSpeechAdapter,
+    OpenAICompatibleVisionExtractor,
+    mock_document_extraction,
+    mock_transcription,
+)
 from app.services.audit import write_audit
 from app.services.intake import ensure_active_consent, next_question
+from app.services.storage import AzureBlobDocumentStorage
 
 router = APIRouter(tags=["assistive-adapters"])
 SUPPORTED_AUDIO_MIME_TYPES = {"audio/wav", "audio/x-wav", "audio/mpeg"}
@@ -34,6 +40,14 @@ async def get_document_or_404(session: AsyncSession, document_id: UUID) -> Docum
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return document
+
+
+async def read_private_document(document: Document) -> bytes:
+    stream = await AzureBlobDocumentStorage(get_settings()).download(document.storage_key)
+    content = b"".join([chunk async for chunk in stream])
+    if not content:
+        raise DomainError("document_content_not_found", "Document content is unavailable", status_code=404)
+    return content
 
 
 @router.post(
@@ -146,7 +160,7 @@ async def synthesize_next_question_prompt(
 
 
 @router.post("/documents/{document_id}/extractions", response_model=AssistiveArtifactResponse, status_code=status.HTTP_201_CREATED)
-async def create_mock_document_extraction(
+async def create_document_extraction(
     document_id: UUID,
     payload: DocumentExtractionRequest,
     request: Request,
@@ -156,12 +170,37 @@ async def create_mock_document_extraction(
     document = await get_document_or_404(session, document_id)
     ensure_encounter_access(principal, document.encounter_id)
     await ensure_active_consent(session, document.encounter_id)
-    output = mock_document_extraction(get_settings().ocr_adapter_mode, payload.fixture_id)
+    settings = get_settings()
+    adapter_mode = settings.ocr_adapter_mode.strip().lower()
+    if adapter_mode == "mock":
+        output = mock_document_extraction(adapter_mode, payload.fixture_id)
+    elif adapter_mode == "openai_compatible":
+        if document.mime_type not in {"image/jpeg", "image/png"}:
+            raise DomainError(
+                code="vision_extraction_unsupported_document",
+                message="Vision extraction currently supports JPEG and PNG documents only; use manual review for PDFs.",
+                status_code=422,
+            )
+        output = await OpenAICompatibleVisionExtractor(settings).extract_image(
+            await read_private_document(document), document.mime_type, document.document_type
+        )
+    elif adapter_mode == "disabled":
+        raise DomainError(
+            code="ocr_adapter_unavailable",
+            message="Document extraction is disabled; use manual review.",
+            status_code=503,
+        )
+    else:
+        raise DomainError(
+            code="ocr_adapter_misconfigured",
+            message="Document extraction mode is invalid; use disabled, mock, or openai_compatible.",
+            status_code=503,
+        )
     artifact = AssistiveArtifact(
         encounter_id=document.encounter_id,
         document_id=document.id,
         artifact_type="document_extraction",
-        provider="mock",
+        provider=output.provider,
         status="COMPLETED",
         raw_text=output.raw_text,
         structured_data=output.structured_data,
@@ -176,7 +215,13 @@ async def create_mock_document_extraction(
         actor_id=principal.subject if principal.token_type == "staff" else None,
         encounter_id=document.encounter_id,
         request=request,
-        metadata={"artifact_id": str(artifact.id), "document_id": str(document.id), "provider": "mock", "fixture_id": payload.fixture_id},
+        metadata={
+            "artifact_id": str(artifact.id),
+            "document_id": str(document.id),
+            "provider": output.provider,
+            "fixture_id": payload.fixture_id if adapter_mode == "mock" else None,
+            "prompt": output.structured_data.get("prompt"),
+        },
     )
     await session.commit()
     await session.refresh(artifact)

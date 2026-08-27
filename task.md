@@ -126,7 +126,7 @@
 | Done | ID | Task | Owner | Status | Done when |
 | --- | --- | --- | --- | --- | --- |
 | [X] | INT-01 | Add encounter-scoped speech transcription contract | Backend | Implemented; pending user verification | Active consent and scoped access are required; `AsyncOpenAI` transcription is evidence only |
-| [X] | INT-02 | Add document-scoped OCR extraction contract | Backend | Implemented; pending user verification | A mock result preserves document provenance, confidence, raw text, and structured entities |
+| [X] | INT-02 | Add document-scoped Luna vision extraction | Backend | Implemented; pending user verification | A private JPEG/PNG is passed to `gpt-5.6-luna` through `AsyncOpenAI`; output remains unverified evidence |
 | [X] | INT-03 | Add deterministic mock and disabled fallback modes | Backend | Implemented; pending user verification | `mock` returns labelled synthetic fixtures; `disabled` returns safe 503 without persisting output |
 | [X] | INT-04 | Preserve the verification boundary | Backend | Implemented; pending user verification | No adapter request creates a patient response, clinical fact, diagnosis, or verified data |
 | [X] | INT-05 | Add PRD, configuration template, and Postman contract | Backend | Implemented; pending user verification | PRD/07, `.env.example`, and Postman cover the manual gates |
@@ -135,12 +135,22 @@
 
 ## INT user test checklist — Postman
 
-- [ ] Set `SPEECH_ADAPTER_MODE=openai_compatible`; keep `LLM_BASE_URL`/`LLM_API_KEY` pointed at the Azure OpenAI-compatible `/openai/v1` endpoint/key; set the STT/TTS deployment names; rebuild the API.
+- [ ] Set `SPEECH_ADAPTER_MODE=openai_compatible` and `OCR_ADAPTER_MODE=openai_compatible`; keep `LLM_BASE_URL`/`LLM_API_KEY` pointed at the Azure OpenAI-compatible `/openai/v1` endpoint/key; set the STT/TTS deployment names; rebuild the API.
 - [ ] INT-01 requires active consent and the current encounter token; returns a labelled `openai_compatible` transcription with language and creates no patient response or clinical fact.
-- [ ] INT-02 returns a labelled `mock` extraction linked to the selected document, with raw text, entities, confidence, and `requires_clinician_verification=true`; it creates no clinical fact.
+- [ ] INT-02 uses `gpt-5.6-luna` for a selected synthetic JPEG/PNG, returns `provider=openai_compatible_vision` with raw text/entities and `requires_clinician_verification=true`, and creates no clinical fact. PDF extraction returns safe 422/manual review.
 - [ ] INT-03 returns only the selected document's latest extraction and denies a different encounter token.
 - [ ] Set `SPEECH_ADAPTER_MODE=disabled`, rebuild, and run INT-04. It returns `503 speech_adapter_unavailable`, persists no output, and touch intake remains the fallback.
 - [ ] INT-05 streams WAV audio and returns the current server-configured question key. It cannot receive arbitrary text, a summary, or a provider-generated prompt.
+
+## Active task — PRM Prompt System v1
+
+| Done | ID | Task | Owner | Status | Done when |
+| --- | --- | --- | --- | --- | --- |
+| [X] | PRM-01 | Add versioned prompt-file registry with ID, task, version, and SHA-256 hash | Backend | Implemented; pending user verification | Summary and vision tasks resolve immutable prompt metadata |
+| [X] | PRM-02 | Persist summary prompt metadata and audit it | Backend | Implemented; pending user verification | B5 S-01 returns `prompt_metadata`; audit stores the same metadata |
+| [X] | PRM-03 | Persist Luna vision prompt metadata with extraction evidence | Backend | Implemented; pending user verification | INT-02 stores prompt metadata with its unverified extraction/audit event |
+| [X] | PRM-04 | Add synthetic grounding and visible-text evaluation fixtures | Backend | Implemented; pending human evaluation | Fixtures define allowed/prohibited outcomes without claiming model quality |
+| [ ] | PRM-05 | User acceptance gate | User | Pending | User validates B5 S-01 and INT-02 prompt metadata in Postman |
 
 ## Backlog after B4 acceptance
 
@@ -164,6 +174,7 @@
 | D-03 | Synthetic demo data only | All | Active |
 | D-04 | Azure Blob Storage selected for document binaries; private-container configuration used for B4 acceptance | User/DevOps | Active |
 | D-05 | No provider credentials/clinical policy for live speech, OCR, LLM, or ABDM sandbox have been supplied | User/Product | Open |
+| D-06 | Hackathon STT/TTS and JPEG/PNG document extraction use direct `AsyncOpenAI` against the Azure OpenAI-compatible `/openai/v1` endpoint: `gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`, and `gpt-5.6-luna` vision. Azure Speech/Document Intelligence remain handbook alternatives, not delivered integrations. | Product/Backend | Active; INT Postman acceptance pending |
 
 ## Acceptance history
 
