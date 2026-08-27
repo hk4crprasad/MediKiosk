@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     azure_openai_tts_deployment: str | None = None
     azure_openai_tts_voice: str = "alloy"
     max_upload_bytes: int = 10 * 1024 * 1024
+    pdf_max_pages: int = 10
+    pdf_render_dpi: int = 144
     auto_create_schema: bool = False
     bootstrap_admin_email: str = "admin@medikiosk.local"
     bootstrap_admin_password: str = Field(min_length=12)

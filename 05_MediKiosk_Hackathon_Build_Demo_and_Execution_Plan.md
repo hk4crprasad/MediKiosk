@@ -66,7 +66,7 @@ docs/
 | ------------------------------- | ---------------------------------- | ------------------------------------------------- |
 | Multilingual voice capture      | ASR + TTS + language selector      | Hindi spoken intake                               |
 | Voice + touch                   | Dual-mode question UI              | Disable voice and continue by touch               |
-| Adaptive clinical history       | Controlled complaint pathway       | Chest-pain follow-ups adapt to answers            |
+| Adaptive clinical history       | Controlled complaint pathways      | Chest discomfort, fever, headache, and abdominal-pain follow-ups remain server-controlled |
 | Low-literacy/elderly access     | Audio, large targets, simple steps | First-time usability test                         |
 | AYUSH case-taking               | Dedicated Dashavidha flow          | Separate Ayurveda scenario/doctor section         |
 | Document digitization           | OCR + entity extraction            | Scan lab/prescription and open source             |

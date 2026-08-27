@@ -41,7 +41,7 @@ MediKiosk is a pre-consultation clinical-intake platform. A patient uses voice o
 - English + Hindi intake; one regional language only if the core flow is already stable.
 - Voice input plus touch fallback for every essential question.
 - Structured general clinical history: chief complaint, HPI, past medical/surgical history, medications, allergies, family/personal history, and review of systems.
-- At least four polished complaint pathways (recommended: chest pain, abdominal pain, fever, headache).
+- Four server-controlled complaint pathways: chest discomfort, abdominal pain, fever, and headache. Each stores evidence-linked answers and required completion fields; only the clinician-reviewed chest rule currently creates urgent-review status.
 - One deterministic red-flag demonstration that immediately requests clinical review.
 - AYUSH mode covering the Dashavidha parameters named in the problem statement plus Ahara-Vihara.
 - Document capture for printed prescription, lab report, and discharge summary; extracted facts shown with confidence/source.
@@ -99,6 +99,8 @@ MediKiosk is a pre-consultation clinical-intake platform. A patient uses voice o
 | FR-015 | Audit             | Key clinical edits, consent changes, exports, and access are recorded.                       | P1           |
 | FR-016 | Interoperability  | Internal data can be transformed into FHIR-compatible export through an adapter.             | P1           |
 | FR-017 | Fallback          | If voice/LLM is unavailable, touch-based structured intake continues.                        | P1           |
+| FR-018 | Pathway coverage  | Chest discomfort, abdominal pain, fever, and headache use independently versioned, controlled pathways. | P0 |
+| FR-019 | Role APIs         | Kiosk/patient, physician, and triage operations enforce separate access boundaries. | P0 |
 
 # 7\. Non-functional requirements and acceptance targets
 

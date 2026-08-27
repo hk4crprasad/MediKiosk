@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from app.models.entities import DocumentStatus
@@ -14,3 +15,12 @@ class DocumentResponse(BaseModel):
     size_bytes: int
     processing_status: DocumentStatus
     created_at: datetime
+
+
+class DocumentTimelineItem(BaseModel):
+    event_type: Literal["uploaded", "extraction", "review", "verified_fact"]
+    occurred_at: datetime
+    document_id: UUID
+    artifact_id: UUID | None = None
+    page_number: int | None = None
+    data: dict

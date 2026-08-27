@@ -133,6 +133,36 @@
       ]
     },
     {
+      "name": "PTH — Fever, headache, abdominal-pain pathways (user test gate PTH-01 to PTH-05)",
+      "item": [
+        {
+          "name": "PTH-01 POST /encounters — create fever pathway",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Fever Patient\", \"birth_year\": 1990, \"sex\": \"female\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"fever-v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Set encounter_id and kiosk_session_token manually from this response, then use C-01 to grant clinical_intake consent. Expected question order: chief_complaint=fever, onset_duration, measured_temperature (optional), chills, fever_associated_symptoms (optional), allergies, current_medications. Use the B2 response request format for each next-question result; only required fields block submit. No new automated red flag is expected." },
+          "response": []
+        },
+        {
+          "name": "PTH-02 POST /encounters — create headache pathway",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Headache Patient\", \"birth_year\": 1986, \"sex\": \"male\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"headache-v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Grant consent before calling next-question. Expected required sequence: chief_complaint=headache, onset_duration, headache_location, headache_severity (mild|moderate|severe|not_sure), vision_changes=yes|no, allergies, current_medications. Confirm invalid choice and out-of-sequence responses are rejected, then submit and inspect the created facts." },
+          "response": []
+        },
+        {
+          "name": "PTH-03 POST /encounters — create abdominal-pain pathway",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Abdominal Pain Patient\", \"birth_year\": 1978, \"sex\": \"female\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"abdominal-pain-v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Grant consent before calling next-question. Expected required sequence: chief_complaint=abdominal_pain, onset_duration, abdominal_pain_location, abdominal_pain_severity (mild|moderate|severe|not_sure), nausea_or_vomiting=yes|no, allergies, current_medications. bowel_or_urinary_changes is optional. Confirm submit rejects missing required fields and no unapproved automated red flag is created." },
+          "response": []
+        },
+        {
+          "name": "PTH-04 POST /summary/generations — pathway summary",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "After completing one additional pathway, verify the draft contains only saved values: chief_complaint, onset_duration, allergies, current_medications, and the pathway-specific fields under associated_symptoms. It must not diagnose, prescribe, or invent missing details." },
+          "response": []
+        },
+        {
+          "name": "PTH-05 Role-boundary API check",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}", "description": "Physician/admin verifies the clinician view for any pathway. Then verify kiosk access is denied for this endpoint, triage queue, summary edit/verification, document review/timeline, and FHIR export. A triage-role token may read /triage/queue and acknowledge a red flag but cannot edit/verify a summary or export FHIR." },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "B3 — Safety and clinician review (user test gate T/R)",
       "item": [
         {
@@ -303,7 +333,7 @@
       ]
     },
     {
-      "name": "INT — Assistive adapter contracts (user test gate INT-01 to INT-05)",
+      "name": "INT — Assistive adapter contracts (user test gate INT-01 to INT-08)",
       "item": [
         {
           "name": "INT-01 POST /speech/transcriptions — OpenAI-compatible STT",
@@ -312,7 +342,7 @@
         },
         {
           "name": "INT-02 POST /documents/{document_id}/extractions — Luna vision",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions", "description": "Prerequisite: document_id is a synthetic JPEG/PNG B4 upload for this encounter. Set OCR_ADAPTER_MODE=openai_compatible; LLM_BASE_URL/LLM_API_KEY and LLM_MODEL=gpt-5.6-luna are reused through AsyncOpenAI. Rebuild. User verifies provider=openai_compatible_vision, document provenance, extracted text, entities, requires_clinician_verification=true, and no clinical fact. PDF returns a safe 422 manual-review response in this MVP." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions", "description": "Prerequisite: document_id is a synthetic JPEG/PNG B4 upload for this encounter. Set OCR_ADAPTER_MODE=openai_compatible; LLM_BASE_URL/LLM_API_KEY and LLM_MODEL=gpt-5.6-luna are reused through AsyncOpenAI. Rebuild. User verifies provider=openai_compatible_vision, document provenance, extracted text, entities, requires_clinician_verification=true, and no clinical fact." },
           "response": []
         },
         {
@@ -328,6 +358,21 @@
         {
           "name": "INT-05 POST /audio/prompts/next-question — OpenAI-compatible TTS",
           "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/audio/prompts/next-question", "description": "Prerequisite: the same direct AsyncOpenAI settings as INT-01, plus AZURE_OPENAI_TTS_DEPLOYMENT set to the deployed gpt-4o-mini-tts name. User verifies a WAV response and X-MediKiosk-Question-Key matching the server-configured next question. The endpoint must not accept arbitrary text or generate speech from a summary." },
+          "response": []
+        },
+        {
+          "name": "INT-06 POST /documents/{document_id}/extractions — PDF PyMuPDF + Luna",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions", "description": "Prerequisite: document_id is a synthetic PDF B4 upload and OCR_ADAPTER_MODE=openai_compatible. Rebuild after installing PyMuPDF. The server reads native PDF text, renders each page as PNG, then calls Luna per page. Verify provider=pymupdf_luna_vision, structured_data.document_kind=pdf, native_text, page_count, page_numbered pages, requires_clinician_verification=true, and no clinical fact. Record extraction_id." },
+          "response": []
+        },
+        {
+          "name": "INT-07 POST /document extraction review",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"decision\": \"corrected\",\n  \"note\": \"Physician reviewed synthetic page 1.\",\n  \"promoted_facts\": [\n    {\n      \"fact_type\": \"document_lab_result\",\n      \"value\": {\"test_name\": \"Haemoglobin\", \"value\": \"13.2\", \"unit\": \"g/dL\"},\n      \"source_excerpt\": \"Haemoglobin: 13.2 g/dL\",\n      \"page_number\": 1\n    }\n  ]\n}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions/{{extraction_id}}/reviews", "description": "Physician/admin only. Verify accept, correct, and reject decisions. This request promotes only the explicitly supplied reviewed fact. A rejected review with promoted_facts must return 422. Record review id and confirm the fact has clinician_verified status via GET /facts." },
+          "response": []
+        },
+        {
+          "name": "INT-08 GET /document timeline",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/document-timeline", "description": "Physician/admin only. Verify chronological upload, extraction, review, and verified_fact entries with document/page evidence metadata. It is evidence history, not an AI-generated narrative. A kiosk token must receive 403." },
           "response": []
         }
       ]

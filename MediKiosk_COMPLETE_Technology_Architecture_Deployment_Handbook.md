@@ -271,8 +271,8 @@ This table is the implementation reconciliation for the current repository. The 
 | Primary LLM | GPT-5.6-luna through Azure OpenAI/Foundry | **Used** through the official `AsyncOpenAI` SDK against the configured OpenAI-compatible `/openai/v1` base URL | Versioned prompt registry, evaluation corpus, and prompt hashes remain open. |
 | STT | Azure Speech | **Implemented; pending user Postman acceptance** with `gpt-4o-mini-transcribe` through the same direct `AsyncOpenAI` client | This intentionally replaces the original Azure Speech adapter for the hackathon. It still requires synthetic-audio quality checks, read-back UI, and Hindi validation. |
 | TTS | Azure Speech TTS | **Implemented; pending user Postman acceptance** with `gpt-4o-mini-tts` through `AsyncOpenAI` | TTS is constrained to the server-configured next question; it cannot speak arbitrary or generated clinical content. |
-| Document extraction | Azure Document Intelligence v4 then Luna semantic extraction | **Implemented; pending user Postman acceptance** with `gpt-5.6-luna` vision for private JPEG/PNG documents | This intentionally replaces Document Intelligence for the MVP. PDF OCR, layout/bounding boxes, OCR confidence, entity normalization, and timeline placement remain open. |
-| Clinical workflow | Multiple complaint pathways plus safety rules | **Partially used**: controlled chest-discomfort pathway, one deterministic urgent rule, and AYUSH Dashavidha pathway are accepted | Broader general history and the abdominal-pain, fever, and headache pathways remain open. |
+| Document extraction | Azure Document Intelligence v4 then Luna semantic extraction | **Implemented; pending user Postman acceptance** with `gpt-5.6-luna` vision for private JPEG/PNG documents and PDFs processed as `PyMuPDF → page PNG → Luna` | This intentional hackathon variance avoids a separate OCR provider. PDF native text, page-scoped Luna output, clinician review, and evidence-timeline APIs are delivered; confidence calibration, entity normalization, and broader production OCR evaluation remain open. |
+| Clinical workflow | Multiple complaint pathways plus safety rules | **Implemented; pending user Postman acceptance**: controlled chest discomfort, fever, headache, abdominal-pain, and AYUSH Dashavidha pathways; one deterministic chest urgent rule remains accepted | The three new pathways are structured capture only. Broader generic history and clinically approved safety rules for them remain open. |
 | Frontend | Next.js patient, physician, and triage applications | **Not present in this repository** | Required for the complete product/demo experience, language selection, accessibility, read-back, and timeline display. |
 | Deployment | VPS, Nginx, HTTPS, Certbot, backups, observability, CI/CD | **Not implemented**; local Docker Compose exists | Required before a public demo or production-like deployment. |
 | Interoperability | FHIR R4 mapper, validation, optional ABDM/HIS sandbox adapter | **Partially used**: local FHIR bundle and local structural validation are accepted | Verified-only mapping policy refinement and real ABDM/HIS sandbox connection remain open. |
@@ -1166,19 +1166,17 @@ Upload
 ↓
 Blob Storage
 ↓
-Azure Document Intelligence
+PyMuPDF native text extraction
 ↓
-OCR text/layout
+render each PDF page as PNG
 ↓
-confidence metadata
+GPT-5.6-luna page-scoped extraction
 ↓
-GPT-5.6-luna semantic extraction
-↓
-clinical entity validation
+clinician review/correction
 ↓
 timeline placement
 ↓
-doctor verification
+optional physician-promoted verified facts
 ```
 
 ---
@@ -1268,6 +1266,8 @@ abdominal_pain
 fever
 headache
 ```
+
+Current API implementation uses the versioned routes `chest-discomfort-v1`, `abdominal-pain-v1`, `fever-v1`, and `headache-v1`. The latter three are structured capture pathways only; automated red-flag rules remain restricted to clinician-approved configurations.
 
 Example:
 

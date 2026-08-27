@@ -4,7 +4,7 @@ FastAPI modular-monolith backend for the hackathon MVP. It implements the API co
 
 - staff login and roles;
 - kiosk-scoped encounters and consent;
-- controlled chest-discomfort and AYUSH Dashavidha intake pathways;
+- controlled chest-discomfort, fever, headache, abdominal-pain, and AYUSH Dashavidha intake pathways;
 - evidence-linked clinical facts and deterministic red-flag triage;
 - clinician review, document metadata/upload, template summaries, and local FHIR bundle export.
 
@@ -31,4 +31,6 @@ No API request has been executed by Codex. The user must run every request in th
 - Staff JWT logout writes a token-revocation receipt. Add refresh-token rotation and periodic revocation-record cleanup before multi-user production use.
 - The FHIR export has local structural validation status only; it is not an ABDM production claim.
 - `ayush-dashavidha-v1` is a patient-reported pre-consultation pathway. It records context for clinician review only and provides no automated AYUSH assessment, diagnosis, prescription, or treatment recommendation.
+- `fever-v1`, `headache-v1`, and `abdominal-pain-v1` are structured data-capture pathways. Their questions are server-controlled, but no new automatic triage rule is enabled until a clinical owner approves the rule and its synthetic test fixtures.
+- API roles are ready for UI integration: the kiosk token is scoped to one encounter; physician/admin can view clinician records, review documents, edit/verify summaries, and export FHIR; triage/admin/physician can read and acknowledge the triage queue. The current clinical review, document timeline, and triage routes are the role-specific read models.
 - Speech and OCR integrations are adapter contracts. Their default `disabled` mode returns a safe fallback response; `SPEECH_ADAPTER_MODE=mock` and `OCR_ADAPTER_MODE=mock` return deterministic synthetic fixtures only. Raw audio is not stored and neither transcription nor extraction creates a clinical fact.

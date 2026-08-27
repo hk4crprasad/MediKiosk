@@ -1,6 +1,8 @@
 import base64
 from dataclasses import dataclass
 
+import fitz
+
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
@@ -254,3 +256,84 @@ class OpenAICompatibleVisionExtractor:
             ) from exc
         finally:
             await client.close()
+
+    async def extract_pdf(self, content: bytes, document_type: str) -> AdapterOutput:
+        """Extract native PDF text and render each page to a Luna-readable PNG.
+
+        Page images stay in memory. The source PDF remains the evidence object in private Blob
+        Storage; the saved artifact preserves page-scoped output and never becomes a clinical fact.
+        """
+        if not self.configured:
+            raise DomainError(
+                code="vision_extraction_unavailable",
+                message="OpenAI-compatible vision extraction is not configured; use manual review.",
+                status_code=503,
+            )
+        try:
+            pdf = fitz.open(stream=content, filetype="pdf")
+        except (fitz.FileDataError, RuntimeError, ValueError) as exc:
+            raise DomainError(
+                code="pdf_processing_unavailable",
+                message="The uploaded PDF could not be read; use manual review.",
+                status_code=422,
+            ) from exc
+        try:
+            page_count = pdf.page_count
+            if page_count < 1:
+                raise DomainError(
+                    code="pdf_processing_unavailable",
+                    message="The uploaded PDF has no readable pages; use manual review.",
+                    status_code=422,
+                )
+            if page_count > self._settings.pdf_max_pages:
+                raise DomainError(
+                    code="pdf_page_limit_exceeded",
+                    message=(
+                        f"PDF has {page_count} pages; the configured maximum is "
+                        f"{self._settings.pdf_max_pages}."
+                    ),
+                    status_code=422,
+                )
+            scale = max(self._settings.pdf_render_dpi, 72) / 72
+            pages: list[dict] = []
+            native_pages: list[str] = []
+            for page_number, page in enumerate(pdf, start=1):
+                native_text = page.get_text("text").strip()
+                native_pages.append(native_text)
+                page_image = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False).tobytes("png")
+                vision = await self.extract_image(page_image, "image/png", document_type)
+                pages.append(
+                    {
+                        "page_number": page_number,
+                        "native_text": native_text,
+                        "vision_text": vision.raw_text,
+                        "entities": vision.structured_data["entities"],
+                    }
+                )
+            native_text = "\n\n".join(text for text in native_pages if text)
+            combined_text = native_text or "\n\n".join(page["vision_text"] for page in pages)
+            prompt = get_prompt("document_extraction")
+            return AdapterOutput(
+                raw_text=combined_text,
+                structured_data={
+                    "document_kind": "pdf",
+                    "page_count": page_count,
+                    "native_text": native_text,
+                    "pages": pages,
+                    "rendering": {"engine": "pymupdf", "format": "png", "dpi": self._settings.pdf_render_dpi},
+                    "requires_clinician_verification": True,
+                    "prompt": prompt.metadata,
+                },
+                confidence=None,
+                provider="pymupdf_luna_vision",
+            )
+        except DomainError:
+            raise
+        except (fitz.FileDataError, RuntimeError, ValueError) as exc:
+            raise DomainError(
+                code="pdf_processing_unavailable",
+                message="PDF page rendering or vision extraction failed; use manual review.",
+                status_code=503,
+            ) from exc
+        finally:
+            pdf.close()

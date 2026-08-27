@@ -53,6 +53,7 @@ For the pre-development and backend-delivery phase, testing is a gated human ver
 | ------- | -------------------------------------- | ---------------------------------------------------------------- |
 | SAFE-01 | Chest discomfort + breathlessness      | Urgent-review alert appears with evidence; no diagnosis text     |
 | SAFE-02 | Non-red-flag chest discomfort fixture  | No urgent alert from that rule; interview continues              |
+| PATH-01 | Fever, headache, abdominal-pain pathway packs | Each returns only its configured questions, rejects out-of-sequence answers, creates patient-confirmed facts, and submits only after required fields are complete |
 | AI-01   | Model returns invalid JSON             | Output rejected/retried; session remains usable                  |
 | AI-02   | Summary asks for missing fact          | Summary marks it not captured; does not invent it                |
 | DOC-01  | Lab report with value/unit/range       | Value, unit, range, source, confidence captured                  |
@@ -76,11 +77,14 @@ For the pre-development and backend-delivery phase, testing is a gated human ver
 
 # 7\. Document/OCR testing
 
+- For a synthetic PDF, verify native text is retained, every rendered page has a page number, and Luna output is page-scoped.
+- Verify malformed/over-page-limit PDFs fail safely and the original source remains downloadable for manual review.
 - Measure field-level accuracy, not just "OCR looked good."
 - For medicines: name, strength, route/frequency where present.
 - For labs: test name, value, unit, reference range, abnormal flag when supported.
 - For dates: document date and normalization accuracy.
 - For timeline: confirm ordering and uncertain-date handling.
+- Verify an extraction creates no clinical fact; only a physician review may explicitly promote a selected item, with document/page evidence preserved.
 - For difficult handwriting: report limitations; never hide low confidence.
 
 # 8\. Summary factuality test

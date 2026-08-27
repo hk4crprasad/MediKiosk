@@ -15,11 +15,10 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
     ).all()
     values = {fact.fact_type: fact.value.get("value") for fact in facts}
     ayush_values = {key.removeprefix("ayush_"): value for key, value in values.items() if key.startswith("ayush_")}
-    chest_pathway_values_present = any(
-        key in values
-        for key in ("chief_complaint", "onset_duration", "breathlessness", "sweating", "allergies", "current_medications")
+    clinical_pathway_values_present = any(
+        key in values for key in ("chief_complaint", "onset_duration", "allergies", "current_medications")
     )
-    if ayush_values and not chest_pathway_values_present:
+    if ayush_values and not clinical_pathway_values_present:
         ayush_text = "; ".join(
             f"{key.replace('_', ' ')}: {value if value is not None else 'Not captured'}"
             for key, value in ayush_values.items()
@@ -27,24 +26,30 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
         content = {"ayush_assessment": ayush_values}
         return content, f"AYUSH intake (patient-reported, pending clinician review): {ayush_text}."
 
+    base_keys = {"chief_complaint", "onset_duration", "allergies", "current_medications"}
+    associated_symptoms = {
+        key: value
+        for key, value in values.items()
+        if key not in base_keys and not key.startswith("ayush_")
+    }
     content = {
         "chief_complaint": values.get("chief_complaint", "Not captured"),
         "onset_duration": values.get("onset_duration", "Not captured"),
-        "associated_symptoms": {
-            "breathlessness": values.get("breathlessness", "Not captured"),
-            "sweating": values.get("sweating", "Not captured"),
-        },
+        "associated_symptoms": associated_symptoms,
         "allergies": values.get("allergies", "Not captured"),
         "current_medications": values.get("current_medications", "Not captured"),
     }
     if ayush_values:
         content["ayush_assessment"] = ayush_values
 
+    symptom_text = "; ".join(
+        f"{key.replace('_', ' ')}: {value if value is not None else 'Not captured'}"
+        for key, value in associated_symptoms.items()
+    ) or "Not captured"
     text = (
         f"Chief complaint: {content['chief_complaint']}. "
         f"Onset/duration: {content['onset_duration']}. "
-        f"Breathlessness: {content['associated_symptoms']['breathlessness']}. "
-        f"Sweating: {content['associated_symptoms']['sweating']}. "
+        f"Associated details: {symptom_text}. "
         f"Allergies: {content['allergies']}. "
         f"Current medications: {content['current_medications']}."
     )

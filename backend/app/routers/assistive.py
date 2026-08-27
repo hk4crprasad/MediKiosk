@@ -8,10 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.errors import DomainError
-from app.core.security import Principal, get_principal
-from app.models import AssistiveArtifact, Document
-from app.models.entities import DocumentStatus
-from app.schemas.assistive import AssistiveArtifactResponse, DocumentExtractionRequest
+from app.core.security import Principal, get_principal, require_staff
+from app.models import AssistiveArtifact, ClinicalFact, Document
+from app.models.entities import DocumentStatus, VerificationStatus
+from app.schemas.assistive import (
+    AssistiveArtifactResponse,
+    DocumentExtractionRequest,
+    DocumentExtractionReviewRequest,
+    DocumentExtractionReviewResponse,
+)
 from app.services.access import ensure_encounter_access, get_encounter_or_404
 from app.services.assistive import (
     OpenAICompatibleSpeechAdapter,
@@ -172,30 +177,50 @@ async def create_document_extraction(
     await ensure_active_consent(session, document.encounter_id)
     settings = get_settings()
     adapter_mode = settings.ocr_adapter_mode.strip().lower()
-    if adapter_mode == "mock":
-        output = mock_document_extraction(adapter_mode, payload.fixture_id)
-    elif adapter_mode == "openai_compatible":
-        if document.mime_type not in {"image/jpeg", "image/png"}:
+    document.processing_status = DocumentStatus.processing
+    await session.commit()
+    try:
+        if adapter_mode == "mock":
+            output = mock_document_extraction(adapter_mode, payload.fixture_id)
+        elif adapter_mode == "openai_compatible":
+            extractor = OpenAICompatibleVisionExtractor(settings)
+            source_content = await read_private_document(document)
+            if document.mime_type in {"image/jpeg", "image/png"}:
+                output = await extractor.extract_image(
+                    source_content, document.mime_type, document.document_type
+                )
+            elif document.mime_type == "application/pdf":
+                output = await extractor.extract_pdf(source_content, document.document_type)
+            else:
+                raise DomainError(
+                    code="vision_extraction_unsupported_document",
+                    message="Document extraction supports PDF, JPEG, and PNG documents only.",
+                    status_code=422,
+                )
+        elif adapter_mode == "disabled":
             raise DomainError(
-                code="vision_extraction_unsupported_document",
-                message="Vision extraction currently supports JPEG and PNG documents only; use manual review for PDFs.",
-                status_code=422,
+                code="ocr_adapter_unavailable",
+                message="Document extraction is disabled; use manual review.",
+                status_code=503,
             )
-        output = await OpenAICompatibleVisionExtractor(settings).extract_image(
-            await read_private_document(document), document.mime_type, document.document_type
+        else:
+            raise DomainError(
+                code="ocr_adapter_misconfigured",
+                message="Document extraction mode is invalid; use disabled, mock, or openai_compatible.",
+                status_code=503,
+            )
+    except DomainError:
+        document.processing_status = DocumentStatus.failed
+        await write_audit(
+            session,
+            "assistive.document_extraction_failed",
+            actor_id=principal.subject if principal.token_type == "staff" else None,
+            encounter_id=document.encounter_id,
+            request=request,
+            metadata={"document_id": str(document.id), "provider_mode": adapter_mode},
         )
-    elif adapter_mode == "disabled":
-        raise DomainError(
-            code="ocr_adapter_unavailable",
-            message="Document extraction is disabled; use manual review.",
-            status_code=503,
-        )
-    else:
-        raise DomainError(
-            code="ocr_adapter_misconfigured",
-            message="Document extraction mode is invalid; use disabled, mock, or openai_compatible.",
-            status_code=503,
-        )
+        await session.commit()
+        raise
     artifact = AssistiveArtifact(
         encounter_id=document.encounter_id,
         document_id=document.id,
@@ -226,6 +251,91 @@ async def create_document_extraction(
     await session.commit()
     await session.refresh(artifact)
     return AssistiveArtifactResponse.model_validate(artifact)
+
+
+@router.post(
+    "/documents/{document_id}/extractions/{extraction_id}/reviews",
+    response_model=DocumentExtractionReviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def review_document_extraction(
+    document_id: UUID,
+    extraction_id: UUID,
+    payload: DocumentExtractionReviewRequest,
+    request: Request,
+    principal: Principal = Depends(require_staff("admin", "physician")),
+    session: AsyncSession = Depends(get_session),
+) -> DocumentExtractionReviewResponse:
+    """Record physician review; only explicitly submitted facts become clinician-verified."""
+    document = await get_document_or_404(session, document_id)
+    extraction = await session.get(AssistiveArtifact, extraction_id)
+    if (
+        extraction is None
+        or extraction.document_id != document.id
+        or extraction.artifact_type != "document_extraction"
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document extraction not found")
+    if payload.decision == "rejected" and payload.promoted_facts:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Rejected extractions cannot promote clinical facts",
+        )
+    review = AssistiveArtifact(
+        encounter_id=document.encounter_id,
+        document_id=document.id,
+        artifact_type="document_extraction_review",
+        provider="clinician",
+        status=payload.decision.upper(),
+        raw_text=payload.note or "Clinician reviewed document extraction.",
+        structured_data={
+            "reviewed_extraction_id": str(extraction.id),
+            "decision": payload.decision,
+            "note": payload.note,
+            "requires_clinician_verification": False,
+        },
+        confidence=None,
+    )
+    session.add(review)
+    await session.flush()
+    promoted_fact_ids: list[UUID] = []
+    promoted_fact_details: list[dict] = []
+    for item in payload.promoted_facts:
+        fact = ClinicalFact(
+            encounter_id=document.encounter_id,
+            fact_type=item.fact_type,
+            value=item.value,
+            source_type="document",
+            source_id=document.id,
+            source_excerpt=item.source_excerpt,
+            confidence=None,
+            verification_status=VerificationStatus.clinician_verified,
+        )
+        session.add(fact)
+        await session.flush()
+        promoted_fact_ids.append(fact.id)
+        promoted_fact_details.append({"fact_id": str(fact.id), "page_number": item.page_number})
+    review.structured_data["promoted_fact_ids"] = [str(fact_id) for fact_id in promoted_fact_ids]
+    review.structured_data["promoted_facts"] = promoted_fact_details
+    await write_audit(
+        session,
+        "assistive.document_extraction_reviewed",
+        actor_id=principal.subject,
+        encounter_id=document.encounter_id,
+        request=request,
+        metadata={
+            "document_id": str(document.id),
+            "extraction_id": str(extraction.id),
+            "review_id": str(review.id),
+            "decision": payload.decision,
+            "promoted_fact_ids": [str(fact_id) for fact_id in promoted_fact_ids],
+        },
+    )
+    await session.commit()
+    await session.refresh(review)
+    return DocumentExtractionReviewResponse(
+        review=AssistiveArtifactResponse.model_validate(review),
+        promoted_fact_ids=promoted_fact_ids,
+    )
 
 
 @router.get("/documents/{document_id}/extractions/latest", response_model=AssistiveArtifactResponse)

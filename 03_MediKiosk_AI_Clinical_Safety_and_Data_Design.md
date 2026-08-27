@@ -42,12 +42,12 @@ Each complaint pathway is a small, clinician-reviewable configuration. The workf
 
 1. Capture/upload and run quality checks (cropping, blur, rotation).
 2. Classify document type.
-3. OCR text and layout.
+3. For PDFs, extract native text with PyMuPDF and render each page to PNG; run Luna extraction one page at a time. For source images, run Luna against the original image.
 4. Extract clinical entities such as medicines, dose/frequency, diagnosis, test, value, unit, reference range, and date.
 5. Normalize units/dates only when safe; keep original text beside normalized value.
 6. Attach confidence and source location to each entity.
 7. Low-confidence or clinically important items require patient/physician verification.
-8. Place the document on the timeline using the best supported clinical date; show uncertainty if the date is unclear.
+8. Preserve upload, page extraction, review, and verified-fact events on the evidence timeline. Place the document on the clinical timeline using the best supported clinical date only after clinician review; show uncertainty if the date is unclear.
 
 # 5\. Evidence Trace model
 
@@ -131,6 +131,7 @@ Create a dedicated AYUSH assessment object rather than stuffing all responses in
 - Speech accuracy varies with language, accent, noise, microphone quality, and medical vocabulary.
 - Handwritten-document OCR is less reliable than clean printed text.
 - Clinical red-flag coverage is limited to the reviewed rules included in the prototype.
+- Fever, headache, and abdominal-pain pathways capture structured history but do not create new automated urgent-review flags until a clinical owner approves their rule wording and synthetic positive/negative fixtures.
 - FHIR export demonstrates interoperability engineering; production ABDM onboarding/operational certification is separate.
 - The summary is an assistive draft, not a medical diagnosis or substitute for examination.
 

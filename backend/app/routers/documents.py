@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_session
-from app.core.security import Principal, get_principal
-from app.models import Document
+from app.core.security import Principal, get_principal, require_staff
+from app.models import AssistiveArtifact, ClinicalFact, Document
 from app.models.entities import DocumentStatus
-from app.schemas.documents import DocumentResponse
+from app.schemas.documents import DocumentResponse, DocumentTimelineItem
 from app.services.access import ensure_encounter_access, get_encounter_or_404
 from app.services.audit import write_audit
 from app.services.intake import ensure_active_consent
@@ -125,3 +125,91 @@ async def download_document_content(
     stream = await AzureBlobDocumentStorage(get_settings()).download(document.storage_key)
     headers = {"Content-Disposition": f'attachment; filename="{document.original_filename}"'}
     return StreamingResponse(stream, media_type=document.mime_type, headers=headers)
+
+
+@router.get("/encounters/{encounter_id}/document-timeline", response_model=list[DocumentTimelineItem])
+async def document_timeline(
+    encounter_id: UUID,
+    principal: Principal = Depends(require_staff("admin", "physician")),
+    session: AsyncSession = Depends(get_session),
+) -> list[DocumentTimelineItem]:
+    """Return document evidence history, never an AI-generated clinical narrative."""
+    await get_encounter_or_404(session, encounter_id)
+    documents = (
+        await session.scalars(
+            select(Document).where(Document.encounter_id == encounter_id).order_by(Document.created_at)
+        )
+    ).all()
+    document_ids = [document.id for document in documents]
+    if not document_ids:
+        return []
+    artifacts = (
+        await session.scalars(
+            select(AssistiveArtifact)
+            .where(
+                AssistiveArtifact.document_id.in_(document_ids),
+                AssistiveArtifact.artifact_type.in_(("document_extraction", "document_extraction_review")),
+            )
+            .order_by(AssistiveArtifact.created_at)
+        )
+    ).all()
+    facts = (
+        await session.scalars(
+            select(ClinicalFact)
+            .where(ClinicalFact.encounter_id == encounter_id, ClinicalFact.source_type == "document")
+            .order_by(ClinicalFact.created_at)
+        )
+    ).all()
+    timeline: list[DocumentTimelineItem] = []
+    fact_page_numbers: dict[str, int] = {}
+    for document in documents:
+        timeline.append(
+            DocumentTimelineItem(
+                event_type="uploaded",
+                occurred_at=document.created_at,
+                document_id=document.id,
+                data={
+                    "document_type": document.document_type,
+                    "original_filename": document.original_filename,
+                    "mime_type": document.mime_type,
+                    "processing_status": document.processing_status.value,
+                },
+            )
+        )
+    for artifact in artifacts:
+        if artifact.artifact_type == "document_extraction_review":
+            for promoted_fact in artifact.structured_data.get("promoted_facts", []):
+                fact_id = promoted_fact.get("fact_id")
+                page_number = promoted_fact.get("page_number")
+                if isinstance(fact_id, str) and isinstance(page_number, int):
+                    fact_page_numbers[fact_id] = page_number
+        timeline.append(
+            DocumentTimelineItem(
+                event_type="review" if artifact.artifact_type == "document_extraction_review" else "extraction",
+                occurred_at=artifact.created_at,
+                document_id=artifact.document_id,
+                artifact_id=artifact.id,
+                data={
+                    "provider": artifact.provider,
+                    "status": artifact.status,
+                    "structured_data": artifact.structured_data,
+                },
+            )
+        )
+    for fact in facts:
+        if fact.source_id in document_ids:
+            timeline.append(
+                DocumentTimelineItem(
+                    event_type="verified_fact",
+                    occurred_at=fact.created_at,
+                    document_id=fact.source_id,
+                    page_number=fact_page_numbers.get(str(fact.id)),
+                    data={
+                        "fact_id": str(fact.id),
+                        "fact_type": fact.fact_type,
+                        "source_excerpt": fact.source_excerpt,
+                        "verification_status": fact.verification_status.value,
+                    },
+                )
+            )
+    return sorted(timeline, key=lambda item: item.occurred_at)

@@ -1,6 +1,9 @@
 from typing import Any
 
 CHEST_PATHWAY_VERSION = "chest-discomfort-v1"
+FEVER_PATHWAY_VERSION = "fever-v1"
+HEADACHE_PATHWAY_VERSION = "headache-v1"
+ABDOMINAL_PAIN_PATHWAY_VERSION = "abdominal-pain-v1"
 AYUSH_PATHWAY_VERSION = "ayush-dashavidha-v1"
 
 CHEST_QUESTIONS: list[dict[str, Any]] = [
@@ -37,6 +40,202 @@ CHEST_QUESTIONS: list[dict[str, Any]] = [
         "required": False,
         "choices": ["yes", "no"],
         "when": {"chief_complaint": "chest_discomfort"},
+    },
+    {
+        "key": "allergies",
+        "section": "history",
+        "prompt": "Do you have any known allergies?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "current_medications",
+        "section": "history",
+        "prompt": "What medicines are you currently taking?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+]
+
+
+FEVER_QUESTIONS: list[dict[str, Any]] = [
+    {
+        "key": "chief_complaint",
+        "section": "presenting_complaint",
+        "prompt": "Please confirm the main problem today.",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["fever"],
+    },
+    {
+        "key": "onset_duration",
+        "section": "presenting_complaint",
+        "prompt": "When did the fever start and how long has it been present?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "measured_temperature",
+        "section": "presenting_complaint",
+        "prompt": "What was the highest temperature measured, if known? Include the unit.",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "chills",
+        "section": "associated_symptoms",
+        "prompt": "Have you had chills or shivering?",
+        "input_type": "boolean",
+        "required": True,
+        "choices": ["yes", "no"],
+    },
+    {
+        "key": "fever_associated_symptoms",
+        "section": "associated_symptoms",
+        "prompt": "What other symptoms have you noticed, if any?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "allergies",
+        "section": "history",
+        "prompt": "Do you have any known allergies?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "current_medications",
+        "section": "history",
+        "prompt": "What medicines are you currently taking?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+]
+
+
+HEADACHE_QUESTIONS: list[dict[str, Any]] = [
+    {
+        "key": "chief_complaint",
+        "section": "presenting_complaint",
+        "prompt": "Please confirm the main problem today.",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["headache"],
+    },
+    {
+        "key": "onset_duration",
+        "section": "presenting_complaint",
+        "prompt": "When did the headache start and how long has it been present?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "headache_location",
+        "section": "presenting_complaint",
+        "prompt": "Where is the headache located?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "headache_severity",
+        "section": "presenting_complaint",
+        "prompt": "How would you describe the headache severity?",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["mild", "moderate", "severe", "not_sure"],
+    },
+    {
+        "key": "vision_changes",
+        "section": "associated_symptoms",
+        "prompt": "Have you noticed any changes in vision?",
+        "input_type": "boolean",
+        "required": True,
+        "choices": ["yes", "no"],
+    },
+    {
+        "key": "headache_associated_symptoms",
+        "section": "associated_symptoms",
+        "prompt": "What other symptoms have you noticed, if any?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
+    },
+    {
+        "key": "allergies",
+        "section": "history",
+        "prompt": "Do you have any known allergies?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "current_medications",
+        "section": "history",
+        "prompt": "What medicines are you currently taking?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+]
+
+
+ABDOMINAL_PAIN_QUESTIONS: list[dict[str, Any]] = [
+    {
+        "key": "chief_complaint",
+        "section": "presenting_complaint",
+        "prompt": "Please confirm the main problem today.",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["abdominal_pain"],
+    },
+    {
+        "key": "onset_duration",
+        "section": "presenting_complaint",
+        "prompt": "When did the abdominal pain start and how long has it been present?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "abdominal_pain_location",
+        "section": "presenting_complaint",
+        "prompt": "Where is the pain located?",
+        "input_type": "free_text",
+        "required": True,
+        "choices": [],
+    },
+    {
+        "key": "abdominal_pain_severity",
+        "section": "presenting_complaint",
+        "prompt": "How would you describe the pain severity?",
+        "input_type": "single_choice",
+        "required": True,
+        "choices": ["mild", "moderate", "severe", "not_sure"],
+    },
+    {
+        "key": "nausea_or_vomiting",
+        "section": "associated_symptoms",
+        "prompt": "Have you had nausea or vomiting?",
+        "input_type": "boolean",
+        "required": True,
+        "choices": ["yes", "no"],
+    },
+    {
+        "key": "bowel_or_urinary_changes",
+        "section": "associated_symptoms",
+        "prompt": "Have you noticed any bowel or urinary changes?",
+        "input_type": "free_text",
+        "required": False,
+        "choices": [],
     },
     {
         "key": "allergies",
@@ -182,12 +381,19 @@ AYUSH_QUESTIONS: list[dict[str, Any]] = [
 
 PATHWAYS: dict[str, list[dict[str, Any]]] = {
     CHEST_PATHWAY_VERSION: CHEST_QUESTIONS,
+    FEVER_PATHWAY_VERSION: FEVER_QUESTIONS,
+    HEADACHE_PATHWAY_VERSION: HEADACHE_QUESTIONS,
+    ABDOMINAL_PAIN_PATHWAY_VERSION: ABDOMINAL_PAIN_QUESTIONS,
     AYUSH_PATHWAY_VERSION: AYUSH_QUESTIONS,
 }
 
 
 def is_supported_pathway(pathway_version: str) -> bool:
     return pathway_version in PATHWAYS
+
+
+def supported_pathway_versions() -> list[str]:
+    return list(PATHWAYS)
 
 
 def active_questions(pathway_version: str, answers: dict[str, Any]) -> list[dict[str, Any]]:
