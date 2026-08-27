@@ -30,6 +30,19 @@ class TriageQueueItem(BaseModel):
     red_flag: RedFlagResponse
 
 
+class EncounterListItem(BaseModel):
+    encounter_id: UUID
+    encounter_status: str
+    pathway_version: str
+    patient_display_name: str | None
+    patient_birth_year: int | None
+    patient_sex: str | None
+    patient_abha_identifier: str | None = None
+    has_active_red_flag: bool
+    created_at: datetime
+    submitted_at: datetime | None
+
+
 class ClinicianEncounterResponse(BaseModel):
     encounter: "EncounterResponse"
     facts: list["FactResponse"]

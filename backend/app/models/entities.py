@@ -182,6 +182,19 @@ class AssistiveArtifact(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class QuestionAudioPrompt(TimestampedModel, Base):
+    __tablename__ = "question_audio_prompts"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    question_key: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    language: Mapped[str] = mapped_column(String(16), default="en", nullable=False)
+    prompt_text: Mapped[str] = mapped_column(Text, nullable=False)
+    prompt_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), default="audio/wav", nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
 class Summary(TimestampedModel, Base):
     __tablename__ = "summaries"
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)

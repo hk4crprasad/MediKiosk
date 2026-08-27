@@ -20,6 +20,13 @@ async def create_local_export(session: AsyncSession, encounter: Encounter) -> Fh
             "resource": {
                 "resourceType": "Patient",
                 "id": str(patient.id),
+                "identifier": [
+                    {
+                        "system": "https://healthid.abdm.gov.in",
+                        "value": patient.abha_identifier,
+                        "type": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/v2-0203", "code": "MR"}]},
+                    }
+                ] if patient.abha_identifier else [],
                 "name": [{"text": patient.display_name or "Synthetic patient"}],
                 "gender": patient.sex,
             }

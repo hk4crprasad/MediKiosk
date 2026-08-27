@@ -82,6 +82,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
+    expose_headers=[
+        "X-Request-ID",
+        "X-MediKiosk-Question-Key",
+        "X-MediKiosk-Audio-Prompt-Id",
+        "X-MediKiosk-Audio-Cached",
+        "Content-Disposition",
+    ],
 )
 
 

@@ -2,14 +2,14 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.security import Principal, require_staff
 from app.models import ClinicalFact, Document, Encounter, Patient, RedFlag, Summary
 from app.models.entities import EncounterStatus
-from app.schemas.clinical import AcknowledgeRequest, ClinicianEncounterResponse, RedFlagResponse, TriageQueueItem
+from app.schemas.clinical import AcknowledgeRequest, ClinicianEncounterResponse, EncounterListItem, RedFlagResponse, TriageQueueItem
 from app.schemas.documents import DocumentResponse
 from app.schemas.encounters import EncounterResponse
 from app.schemas.intake import FactResponse
@@ -45,6 +45,44 @@ async def triage_queue(
         for encounter, patient, flag in rows
     ]
 
+
+@triage_router.get("/encounters", response_model=list[EncounterListItem])
+async def list_all_encounters(
+    _: Principal = Depends(require_staff("admin", "triage", "physician")),
+    session: AsyncSession = Depends(get_session),
+    limit: int = 100,
+) -> list[EncounterListItem]:
+    """List the most recent encounters for the admin/triage dashboard, regardless of red-flag status."""
+    active_flag_subq = (
+        select(func.count())
+        .select_from(RedFlag)
+        .where(RedFlag.encounter_id == Encounter.id, RedFlag.active.is_(True))
+        .correlate(Encounter)
+        .scalar_subquery()
+    )
+    rows = (
+        await session.execute(
+            select(Encounter, Patient, active_flag_subq.label("flag_count"))
+            .join(Patient, Patient.id == Encounter.patient_id)
+            .order_by(Encounter.created_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    return [
+        EncounterListItem(
+            encounter_id=encounter.id,
+            encounter_status=encounter.status.value,
+            pathway_version=encounter.pathway_version,
+            patient_display_name=patient.display_name,
+            patient_birth_year=patient.birth_year,
+            patient_sex=patient.sex,
+            patient_abha_identifier=patient.abha_identifier,
+            has_active_red_flag=flag_count > 0,
+            created_at=encounter.created_at,
+            submitted_at=encounter.submitted_at,
+        )
+        for encounter, patient, flag_count in rows
+    ]
 
 @red_flag_router.post("/{red_flag_id}/acknowledgements", response_model=RedFlagResponse)
 async def acknowledge_red_flag(

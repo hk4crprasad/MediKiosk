@@ -23,7 +23,8 @@ export function QuestionAudioButton({ encounterId, questionKey, token }: Questio
       audio.addEventListener("ended", () => URL.revokeObjectURL(url), { once: true });
       await audio.play();
     } catch (caught) {
-      setError(caught instanceof ApiError ? "Audio is not available. Please use the text and touch choices." : "We could not play the question audio.");
+      const msg = caught instanceof ApiError ? (caught.message || "Audio is not available. Please use the text and touch choices.") : "We could not play the question audio.";
+      setError(msg);
     } finally { setLoading(false); }
   }
 

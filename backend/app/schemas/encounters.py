@@ -12,6 +12,7 @@ class PatientInput(BaseModel):
     birth_year: int | None = Field(default=None, ge=1900, le=2100)
     sex: str | None = Field(default=None, max_length=32)
     preferred_language: str = Field(default="en", min_length=2, max_length=16)
+    abha_identifier: str | None = Field(default=None, max_length=64)
 
 
 class EncounterCreateRequest(BaseModel):

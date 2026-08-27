@@ -1,14 +1,24 @@
 import base64
+import hashlib
+import logging
+import struct
 from dataclasses import dataclass
+from uuid import UUID, uuid4
 
 import fitz
 
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.errors import DomainError
+from app.models.entities import QuestionAudioPrompt
 from app.prompting.registry import get_prompt
+from app.services.storage import AzureBlobDocumentStorage
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -337,3 +347,102 @@ class OpenAICompatibleVisionExtractor:
             ) from exc
         finally:
             pdf.close()
+
+
+def generate_mock_wav(duration_seconds: float = 0.5, sample_rate: int = 16000) -> bytes:
+    num_samples = int(sample_rate * duration_seconds)
+    data_size = num_samples * 2  # 16-bit mono
+    riff_chunk_size = 36 + data_size
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",
+        riff_chunk_size,
+        b"WAVE",
+        b"fmt ",
+        16,  # Subchunk1Size (16 for PCM)
+        1,   # AudioFormat (1 for PCM)
+        1,   # NumChannels (1 for mono)
+        sample_rate,
+        sample_rate * 2,  # ByteRate
+        2,   # BlockAlign
+        16,  # BitsPerSample
+        b"data",
+        data_size,
+    )
+    return header + (b"\x00" * data_size)
+
+
+async def get_or_synthesize_question_audio(
+    session: AsyncSession,
+    settings: Settings,
+    question_key: str,
+    prompt_text: str,
+    language: str = "en",
+) -> tuple[bytes, UUID, bool]:
+    """Retrieve pre-synthesized audio prompt from Azure Blob Storage / DB, or synthesize once, upload to blob, and save to DB."""
+    norm_lang = (language or "en").strip().lower()
+    norm_prompt = prompt_text.strip()
+    prompt_hash = hashlib.sha256(f"{norm_lang}:{norm_prompt}".encode("utf-8")).hexdigest()
+
+    cached = await session.scalar(
+        select(QuestionAudioPrompt).where(QuestionAudioPrompt.prompt_hash == prompt_hash)
+    )
+
+    if cached is not None:
+        try:
+            storage = AzureBlobDocumentStorage(settings)
+            stream = await storage.download(cached.storage_key)
+            audio_bytes = b"".join([chunk async for chunk in stream])
+            if audio_bytes:
+                return audio_bytes, cached.id, True
+        except Exception as exc:
+            logger.warning("Failed to fetch cached audio prompt %s from storage: %s", cached.storage_key, exc)
+
+    # Synthesis needed (cache miss or blob download failed)
+    adapter_mode = settings.speech_adapter_mode.strip().lower()
+    if adapter_mode == "openai_compatible":
+        audio_bytes = await OpenAICompatibleSpeechAdapter(settings).synthesize(norm_prompt)
+        provider = "openai_compatible"
+    elif adapter_mode == "mock":
+        audio_bytes = generate_mock_wav()
+        provider = "mock"
+    elif adapter_mode == "disabled":
+        raise DomainError(
+            code="tts_adapter_unavailable",
+            message="Text-to-speech is disabled; display the question as text.",
+            status_code=503,
+        )
+    else:
+        raise DomainError(
+            code="tts_adapter_misconfigured",
+            message="Speech adapter mode is invalid; use disabled, mock, or openai_compatible.",
+            status_code=503,
+        )
+
+    storage_key = f"question_audio/{question_key}_{prompt_hash[:16]}.wav"
+    prompt_id = cached.id if cached is not None else uuid4()
+
+    # Upload to Azure Blob Storage
+    try:
+        storage = AzureBlobDocumentStorage(settings)
+        await storage.upload(storage_key, audio_bytes, "audio/wav", overwrite=True)
+    except Exception as exc:
+        logger.warning("Could not persist question audio to Azure Blob Storage: %s", exc)
+
+    if cached is None:
+        new_prompt = QuestionAudioPrompt(
+            id=prompt_id,
+            question_key=question_key,
+            language=norm_lang,
+            prompt_text=norm_prompt,
+            prompt_hash=prompt_hash,
+            storage_key=storage_key,
+            mime_type="audio/wav",
+            size_bytes=len(audio_bytes),
+            provider=provider,
+        )
+        session.add(new_prompt)
+        await session.flush()
+
+    return audio_bytes, prompt_id, False
+

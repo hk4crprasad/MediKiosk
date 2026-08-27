@@ -9,6 +9,7 @@ from app.models.entities import (
     Patient,
     PatientResponse,
     PhysicianRevision,
+    QuestionAudioPrompt,
     RedFlag,
     RevokedToken,
     Summary,
@@ -17,5 +18,5 @@ from app.models.entities import (
 
 __all__ = [
     "AssistiveArtifact", "AuditEvent", "ClinicalFact", "Consent", "Document", "Encounter", "FhirExport", "Patient",
-    "PatientResponse", "PhysicianRevision", "RedFlag", "RevokedToken", "Summary", "User",
+    "PatientResponse", "PhysicianRevision", "QuestionAudioPrompt", "RedFlag", "RevokedToken", "Summary", "User",
 ]

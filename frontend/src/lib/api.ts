@@ -33,22 +33,218 @@ export type ClinicianEncounter = {
   summary: { id: string; content?: string; status?: string } | null;
 };
 
-export const createEncounter = (payload: { displayName?: string; birthYear?: number; sex?: string; language: string; pathway: Pathway }) => request<EncounterCreated>("/encounters", { method: "POST", body: { patient: { display_name: payload.displayName || null, birth_year: payload.birthYear || null, sex: payload.sex || null, preferred_language: payload.language }, mode: "kiosk", pathway_version: payload.pathway } });
+export type Summary = {
+  id: string;
+  encounter_id: string;
+  content: Record<string, unknown>;
+  text: string;
+  source: string;
+  prompt_version: string | null;
+  prompt_metadata: Record<string, unknown>;
+  status: "DRAFT" | "ACCEPTED" | "REJECTED";
+  created_at: string;
+};
+
+export type FhirExport = {
+  id: string;
+  encounter_id: string;
+  validation_status: string;
+  bundle: Record<string, unknown>;
+  created_at: string;
+};
+
+export type DocumentTimelineItem = {
+  event_type: "uploaded" | "extraction" | "review" | "verified_fact";
+  occurred_at: string;
+  document_id: string;
+  artifact_id?: string | null;
+  page_number?: number | null;
+  data: Record<string, unknown>;
+};
+
+export type AssistiveArtifact = {
+  id: string;
+  encounter_id: string;
+  document_id?: string | null;
+  artifact_type: string;
+  provider: string;
+  status: string;
+  language?: string | null;
+  raw_text: string;
+  structured_data: Record<string, unknown>;
+  confidence?: number | null;
+  created_at: string;
+};
+
+export const createEncounter = (payload: {
+  displayName?: string;
+  birthYear?: number;
+  sex?: string;
+  language: string;
+  pathway: Pathway;
+  abhaIdentifier?: string;
+}) =>
+  request<EncounterCreated>("/encounters", {
+    method: "POST",
+    body: {
+      patient: {
+        display_name: payload.displayName || null,
+        birth_year: payload.birthYear || null,
+        sex: payload.sex || null,
+        preferred_language: payload.language,
+        abha_identifier: payload.abhaIdentifier || null,
+      },
+      mode: "kiosk",
+      pathway_version: payload.pathway,
+    },
+  });
 export const recordConsent = (id: string, token: string, language: string) => request(`/encounters/${id}/consents`, { method: "POST", token, body: { consent_type: "clinical_intake", version: "v1", language, granted: true } });
 export const getNextQuestion = (id: string, token: string) => request<Question | null>(`/encounters/${id}/intake/next-question`, { token });
 export const submitAnswer = (id: string, token: string, question: Question, value: string, rawText?: string) => request(`/encounters/${id}/intake/responses`, { method: "POST", token, body: { question_key: question.key, value, input_mode: "touch", language: "en", raw_text: rawText?.trim() || null } });
 export const getFacts = (id: string, token: string) => request<Fact[]>(`/encounters/${id}/facts`, { token });
 export const submitIntake = (id: string, token: string) => request(`/encounters/${id}/submit`, { method: "POST", token });
 export const login = (email: string, password: string) => request<StaffToken>("/auth/login", { method: "POST", body: { email, password } });
+export const logout = (token: string) => request<void>("/auth/logout", { method: "POST", token });
+export const createStaffUser = (token: string, payload: { email: string; password: string; role: "admin" | "triage" | "physician" }) =>
+  request<{ id: string; email: string; role: string; active: boolean }>("/admin/users", { method: "POST", token, body: payload });
 export const getTriageQueue = (token: string) => request<TriageQueueItem[]>("/triage/queue", { token });
+export type EncounterListItem = {
+  encounter_id: string;
+  encounter_status: string;
+  pathway_version: string;
+  patient_display_name: string | null;
+  patient_birth_year: number | null;
+  patient_sex: string | null;
+  patient_abha_identifier?: string | null;
+  has_active_red_flag: boolean;
+  created_at: string;
+  submitted_at: string | null;
+};
+export const getAllEncounters = (token: string) => request<EncounterListItem[]>("/triage/encounters", { token });
 export const acknowledgeFlag = (id: string, token: string) => request(`/red-flags/${id}/acknowledgements`, { method: "POST", token, body: { note: "Acknowledged from triage workspace" } });
 export const getClinicianEncounter = (id: string, token: string) => request<ClinicianEncounter>(`/clinician/encounters/${id}`, { token });
+
+// Summary management
+export const generateSummary = (encounterId: string, token: string) =>
+  request<Summary>(`/encounters/${encounterId}/summary/generations`, { method: "POST", token });
+export const getSummary = (encounterId: string, token: string) =>
+  request<Summary>(`/encounters/${encounterId}/summary`, { token });
+export const updateSummary = (encounterId: string, token: string, text: string) =>
+  request<Summary>(`/encounters/${encounterId}/summary`, { method: "PATCH", token, body: { text } });
+export const verifySummary = (encounterId: string, token: string, decision: "accept" | "reject") =>
+  request<Summary>(`/encounters/${encounterId}/summary/verifications`, { method: "POST", token, body: { decision } });
+
+// FHIR R4 export
+export const exportFhir = (encounterId: string, token: string) =>
+  request<FhirExport>(`/encounters/${encounterId}/fhir/exports`, { method: "POST", token });
+
+// Document upload, timeline & OCR
+export async function uploadDocument(encounterId: string, token: string, file: File, documentType: string = "other") {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("document_type", documentType);
+  const response = await fetch(`${API_BASE_URL}/encounters/${encounterId}/documents`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: { message?: string }; detail?: string } | null;
+    throw new ApiError(response.status, payload?.error?.message ?? payload?.detail ?? "Document upload failed.", response.headers.get("X-Request-ID") ?? undefined);
+  }
+  return response.json() as Promise<{ id: string; original_filename: string; mime_type: string; size_bytes: number; processing_status: string }>;
+}
+
+export const extractDocument = (documentId: string, token: string, fixtureId: string = "printed_lab_report_v1") =>
+  request<AssistiveArtifact>(`/documents/${documentId}/extractions`, { method: "POST", token, body: { fixture_id: fixtureId } });
+
+export const getLatestDocumentExtraction = (documentId: string, token: string) =>
+  request<AssistiveArtifact>(`/documents/${documentId}/extractions/latest`, { token });
+
+export const reviewDocumentExtraction = (
+  documentId: string,
+  extractionId: string,
+  token: string,
+  payload: {
+    decision: "accepted" | "corrected" | "rejected";
+    note?: string;
+    promoted_facts?: Array<{ fact_type: string; value: Record<string, unknown>; source_excerpt: string; page_number: number }>;
+  }
+) =>
+  request<{ review: AssistiveArtifact; promoted_fact_ids: string[] }>(
+    `/documents/${documentId}/extractions/${extractionId}/reviews`,
+    { method: "POST", token, body: payload }
+  );
+
+export async function fetchDocumentBlob(documentId: string, token: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/content`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, "Document download failed.");
+  }
+  return response.blob();
+}
+
+export const getDocumentTimeline = (encounterId: string, token: string) =>
+  request<DocumentTimelineItem[]>(`/encounters/${encounterId}/document-timeline`, { token });
+
+// Staff user profile
+export type CurrentUser = { id: string; email: string; role: string; active: boolean };
+export const getMe = (token: string) => request<CurrentUser>("/auth/me", { token });
+
+// Consent management
+export type ConsentRecord = { id: string; encounter_id: string; consent_type: string; version: string; language: string; granted: boolean; created_at: string };
+export const listConsents = (encounterId: string, token: string) =>
+  request<ConsentRecord[]>(`/encounters/${encounterId}/consents`, { token });
+export const revokeConsent = (encounterId: string, consentId: string, token: string) =>
+  request<{ id: string; revoked_at: string }>(`/encounters/${encounterId}/consents/${consentId}/revocations`, { method: "POST", token });
+
+// Speech ASR
+export async function transcribeAudio(encounterId: string, token: string, audioBlob: Blob, language: string = "en", fixtureId: string = "en_general_v1"): Promise<AssistiveArtifact> {
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "recording.wav");
+  formData.append("language", language);
+  formData.append("fixture_id", fixtureId);
+  const response = await fetch(`${API_BASE_URL}/encounters/${encounterId}/speech/transcriptions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: { message?: string }; detail?: string } | null;
+    throw new ApiError(response.status, payload?.error?.message ?? payload?.detail ?? "Audio transcription failed.", response.headers.get("X-Request-ID") ?? undefined);
+  }
+  return response.json() as Promise<AssistiveArtifact>;
+}
+
+// Additional helpers for 100% endpoint wiring
+export type EncounterState = { id: string; status: string; pathway_version: string; created_at: string; submitted_at?: string | null };
+export const getEncounter = (id: string, token: string) => request<EncounterState>(`/encounters/${id}`, { token });
+
+export type DocumentMetadata = { id: string; encounter_id: string; document_type: string; original_filename: string; mime_type: string; size_bytes: number; processing_status: string; created_at: string };
+export const getDocumentMetadata = (documentId: string, token: string) => request<DocumentMetadata>(`/documents/${documentId}`, { token });
+export const listEncounterDocuments = (encounterId: string, token: string) => request<DocumentMetadata[]>(`/encounters/${encounterId}/documents`, { token });
+
+export const getFhirExportById = (encounterId: string, exportId: string, token: string) =>
+  request<FhirExport>(`/encounters/${encounterId}/fhir/exports/${exportId}`, { token });
+
+export const getHealth = async (): Promise<{ status: string; app?: string }> => {
+  const rootUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+  const response = await fetch(`${rootUrl}/health`);
+  return response.json() as Promise<{ status: string; app?: string }>;
+};
+
+// Next question audio
 export async function getNextQuestionAudio(id: string, token: string, expectedQuestionKey: string): Promise<Blob> {
   const response = await fetch(`${API_BASE_URL}/encounters/${id}/audio/prompts/next-question`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
   if (!response.ok) {
     const payload = await response.json().catch(() => null) as { error?: { message?: string }; detail?: string } | null;
     throw new ApiError(response.status, payload?.error?.message ?? payload?.detail ?? "Audio is unavailable.", response.headers.get("X-Request-ID") ?? undefined);
   }
-  if (response.headers.get("X-MediKiosk-Question-Key") !== expectedQuestionKey) throw new ApiError(409, "The audio prompt no longer matches this question.");
+  const returnedKey = response.headers.get("X-MediKiosk-Question-Key");
+  if (returnedKey && returnedKey !== expectedQuestionKey) {
+    throw new ApiError(409, "The audio prompt no longer matches this question.");
+  }
   return response.blob();
 }

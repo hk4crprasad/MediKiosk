@@ -9,7 +9,7 @@ from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.errors import DomainError
 from app.core.security import Principal, get_principal, require_staff
-from app.models import AssistiveArtifact, ClinicalFact, Document
+from app.models import AssistiveArtifact, ClinicalFact, Document, Patient
 from app.models.entities import DocumentStatus, VerificationStatus
 from app.schemas.assistive import (
     AssistiveArtifactResponse,
@@ -21,6 +21,7 @@ from app.services.access import ensure_encounter_access, get_encounter_or_404
 from app.services.assistive import (
     OpenAICompatibleSpeechAdapter,
     OpenAICompatibleVisionExtractor,
+    get_or_synthesize_question_audio,
     mock_document_extraction,
     mock_transcription,
 )
@@ -141,26 +142,38 @@ async def synthesize_next_question_prompt(
     if question is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The configured pathway is already complete")
     settings = get_settings()
-    if settings.speech_adapter_mode.strip().lower() != "openai_compatible":
-        raise DomainError(
-            code="tts_adapter_unavailable",
-            message="Text-to-speech is not configured; display the next question as text.",
-            status_code=503,
-        )
-    audio_content = await OpenAICompatibleSpeechAdapter(settings).synthesize(question["prompt"])
+    patient = await session.get(Patient, encounter.patient_id)
+    language = (patient.preferred_language if patient and patient.preferred_language else "en") or "en"
+    audio_content, prompt_id, is_cached = await get_or_synthesize_question_audio(
+        session=session,
+        settings=settings,
+        question_key=question["key"],
+        prompt_text=question["prompt"],
+        language=language,
+    )
     await write_audit(
         session,
-        "assistive.next_question_prompt_synthesized",
+        "assistive.next_question_prompt_audio_served",
         actor_id=principal.subject if principal.token_type == "staff" else None,
         encounter_id=encounter_id,
         request=request,
-        metadata={"question_key": question["key"], "provider": "openai_compatible"},
+        metadata={
+            "question_key": question["key"],
+            "prompt_id": str(prompt_id),
+            "cached": is_cached,
+            "provider": settings.speech_adapter_mode,
+        },
     )
     await session.commit()
     return Response(
         content=audio_content,
         media_type="audio/wav",
-        headers={"X-MediKiosk-Question-Key": question["key"], "Content-Disposition": 'inline; filename="next-question.wav"'},
+        headers={
+            "X-MediKiosk-Question-Key": question["key"],
+            "X-MediKiosk-Audio-Prompt-Id": str(prompt_id),
+            "X-MediKiosk-Audio-Cached": "true" if is_cached else "false",
+            "Content-Disposition": 'inline; filename="next-question.wav"',
+        },
     )
 
 

@@ -22,7 +22,7 @@ class AzureBlobDocumentStorage:
         self._container_name = settings.azure_blob_container
         self._create_container = settings.azure_blob_create_container
 
-    async def upload(self, storage_key: str, content: bytes, content_type: str) -> None:
+    async def upload(self, storage_key: str, content: bytes, content_type: str, overwrite: bool = False) -> None:
         service: BlobServiceClient | None = None
         try:
             service = BlobServiceClient.from_connection_string(self._connection_string)
@@ -35,7 +35,7 @@ class AzureBlobDocumentStorage:
             blob = container.get_blob_client(storage_key)
             await blob.upload_blob(
                 content,
-                overwrite=False,
+                overwrite=overwrite,
                 content_settings=ContentSettings(content_type=content_type),
             )
         except (AzureError, ImportError, ValueError) as exc:
