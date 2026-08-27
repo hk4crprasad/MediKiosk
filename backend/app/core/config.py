@@ -1,6 +1,4 @@
 from functools import lru_cache
-from pathlib import Path
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,7 +14,13 @@ class Settings(BaseSettings):
     staff_token_expire_minutes: int = 480
     kiosk_token_expire_minutes: int = 60
     cors_origins: str = "http://localhost:3000,http://localhost:3001"
-    upload_dir: Path = Path("/data/uploads")
+    azure_storage_connection_string: str | None = None
+    azure_blob_container: str = "medikiosk-documents"
+    azure_blob_create_container: bool = False
+    llm_base_url: str | None = None
+    llm_api_key: str | None = None
+    llm_model: str = "gpt-5.6-luna"
+    llm_timeout_seconds: float = 30.0
     max_upload_bytes: int = 10 * 1024 * 1024
     auto_create_schema: bool = False
     bootstrap_admin_email: str = "admin@medikiosk.local"

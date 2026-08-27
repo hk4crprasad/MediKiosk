@@ -1,9 +1,8 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
-
 from app.models.entities import RedFlagSeverity
+from app.schemas.common import APIModel as BaseModel
 
 
 class RedFlagResponse(BaseModel):

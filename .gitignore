@@ -1,0 +1,16 @@
+# Local secrets and runtime configuration
+backend/.env
+.env
+
+# Local Firecrawl search/parse cache
+.firecrawl/
+
+# Python and container runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.sqlite3
+
+# Local upload fallback/data artifacts
+data/

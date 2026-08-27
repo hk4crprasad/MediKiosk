@@ -57,10 +57,26 @@ async def submit_response(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Encounter cannot accept intake responses")
 
     answers = await answer_map(session, encounter.id)
-    current_questions = {question["key"]: question for question in active_questions(answers)}
-    question = current_questions.get(payload.question_key)
+    question = await next_question(session, encounter)
     if question is None:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Question is not available in this pathway state")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The configured pathway is already complete")
+    if payload.question_key != question["key"]:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": "Response is out of sequence", "expected_question_key": question["key"]},
+        )
+    if question["input_type"] == "single_choice" and payload.value not in question["choices"]:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"message": "Response is not an allowed choice", "allowed_choices": question["choices"]},
+        )
+    if question["input_type"] == "boolean" and not (
+        isinstance(payload.value, bool) or payload.value in ("yes", "no", "Yes", "No")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Boolean questions accept true/false or yes/no only",
+        )
 
     normalized_value = {"value": payload.value}
     response = PatientResponse(

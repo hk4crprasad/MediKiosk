@@ -1,8 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
-
+from app.schemas.common import APIModel as BaseModel
 
 class FhirExportResponse(BaseModel):
     id: UUID

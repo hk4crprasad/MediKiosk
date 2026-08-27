@@ -12,7 +12,7 @@ from app.models.entities import EncounterStatus, SummaryStatus, VerificationStat
 from app.schemas.summaries import SummaryResponse, SummaryUpdateRequest, SummaryVerificationRequest
 from app.services.access import get_encounter_or_404
 from app.services.audit import write_audit
-from app.services.summaries import generate_template_summary
+from app.services.summaries import generate_summary
 
 router = APIRouter(prefix="/encounters/{encounter_id}/summary", tags=["summary"])
 
@@ -34,7 +34,7 @@ async def generate_summary(
     session: AsyncSession = Depends(get_session),
 ) -> SummaryResponse:
     await get_encounter_or_404(session, encounter_id)
-    summary = await generate_template_summary(session, encounter_id)
+    summary = await generate_summary(session, encounter_id)
     await write_audit(session, "summary.generated", actor_id=principal.subject, encounter_id=encounter_id, request=request)
     await session.commit()
     await session.refresh(summary)

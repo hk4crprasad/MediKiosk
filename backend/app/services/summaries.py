@@ -1,10 +1,12 @@
+from app.core.config import get_settings
+from app.services.openai_compatible import OpenAICompatibleSummaryGenerator, PROMPT_VERSION
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ClinicalFact, Summary
 
 
-async def generate_template_summary(session: AsyncSession, encounter_id) -> Summary:
+async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[dict, str]:
     facts = (
         await session.scalars(
             select(ClinicalFact).where(ClinicalFact.encounter_id == encounter_id).order_by(ClinicalFact.created_at.asc())
@@ -29,6 +31,30 @@ async def generate_template_summary(session: AsyncSession, encounter_id) -> Summ
         f"Allergies: {content['allergies']}. "
         f"Current medications: {content['current_medications']}."
     )
-    summary = Summary(encounter_id=encounter_id, content=content, text=text, source="template")
+    return content, text
+
+
+async def generate_summary(session: AsyncSession, encounter_id) -> Summary:
+    content, template_text = await build_summary_content(session, encounter_id)
+    generator = OpenAICompatibleSummaryGenerator(get_settings())
+    source = "template"
+    prompt_version = None
+    summary_text = template_text
+    if generator.configured:
+        try:
+            generated = await generator.generate(content)
+            summary_text = generated.summary_text
+            source = "openai_compatible"
+            prompt_version = PROMPT_VERSION
+        except RuntimeError:
+            source = "template_fallback"
+            prompt_version = PROMPT_VERSION
+    summary = Summary(
+        encounter_id=encounter_id,
+        content=content,
+        text=summary_text,
+        source=source,
+        prompt_version=prompt_version,
+    )
     session.add(summary)
     return summary

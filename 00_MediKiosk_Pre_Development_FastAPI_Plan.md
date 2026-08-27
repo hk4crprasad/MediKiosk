@@ -32,10 +32,10 @@ Speech, OCR, LLM summarisation, AYUSH extensions, and FHIR export are later adap
 | --- | --- |
 | Backend style | One FastAPI modular monolith, one deployable API, one PostgreSQL database. |
 | API prefix | `/api/v1`; no unversioned business endpoints. |
-| Data ownership | PostgreSQL owns structured clinical data and audit events; object storage owns uploaded binary files only. |
+| Data ownership | PostgreSQL owns structured clinical data and audit events; **private Azure Blob Storage** owns uploaded binary files only. |
 | Clinical workflow | Versioned, clinician-reviewed configuration drives questions and required fields. |
 | Safety | Deterministic red-flag rules run server-side after every normalized response; an LLM cannot suppress them. |
-| AI | Adapter-only; structured output is validated before persistence; all providers have a fallback. |
+| AI | Adapter-only; the official OpenAI Python SDK calls an OpenAI-compatible Chat Completions provider using base URL/key and `gpt-5.6-luna`, structured output is validated before persistence, and a template fallback remains available. No unsupported sampling/token parameters are sent. |
 | Authentication | Kiosk encounter capability/session is separate from staff login and RBAC. |
 | Interoperability | Map internal verified data to FHIR at the boundary; do not make the database a FHIR mirror. |
 | Async work | In-process background task only for the first vertical slice; introduce a durable worker only when document/AI work needs retry and visibility. |
@@ -49,7 +49,7 @@ Speech, OCR, LLM summarisation, AYUSH extensions, and FHIR export are later adap
 | B1 — identity and consent | Staff RBAC, kiosk encounter session, patient/encounter creation, consent receipt, audit records | Speech, AI, documents |
 | B2 — controlled intake | Versioned pathway loader, next-question selection, response validation, clinical facts, completion checks | Free-form chatbot behavior |
 | B3 — safety and review | Server-side rules, explainable red flags, triage queue, acknowledgement, clinician review state | Diagnosis/treatment recommendations |
-| B4 — documents | Upload validation, object storage abstraction, processing state, evidence references, local fixture fallback | Treating OCR extraction as verified truth |
+| B4 — documents | Upload validation, private Azure Blob adapter, processing state, evidence references, local fixture fallback | Treating OCR extraction as verified truth |
 | B5 — summaries and AI | Schema-validated extraction/summarisation adapters, template fallback, physician edit/verify | Unbounded prompts or autonomous decisions |
 | B6 — AYUSH and FHIR | AYUSH pathway/data extensions, FHIR mapper, local validation/export | Claiming live ABDM production integration |
 | B7 — hardening | backup/restore runbook, Docker deployment, observability, rate limits, retention cleanup | Premature microservices/Kubernetes |
@@ -159,6 +159,7 @@ These are contracts to implement in order, not endpoints that exist today.
 | B4 | `POST /api/v1/encounters/{encounter_id}/documents` | Validate/initiate document upload | D-01 |
 | B4 | `GET /api/v1/encounters/{encounter_id}/documents` | Document metadata/status | D-02 |
 | B4 | `GET /api/v1/documents/{document_id}` | Authorized document metadata/evidence link | D-03 |
+| B4 | `GET /api/v1/documents/{document_id}/content` | Authorised private Azure Blob evidence stream | D-04 |
 | B5 | `POST /api/v1/encounters/{encounter_id}/summary/generations` | Create tracked summary generation | S-01 |
 | B5 | `GET /api/v1/encounters/{encounter_id}/summary` | Read latest applicable draft | S-02 |
 | B5 | `PATCH /api/v1/encounters/{encounter_id}/summary` | Clinician edit with version conflict protection | S-03 |
@@ -173,7 +174,7 @@ These are contracts to implement in order, not endpoints that exist today.
 3. Only server-normalized facts may enter a summary generation payload. Raw transcripts/documents are evidence, not permission to invent facts.
 4. AI/OCR output must validate against a Pydantic schema before storage. Invalid provider output becomes a processing failure with a fallback; it never becomes a partially trusted fact.
 5. Verification state is explicit: `unverified`, `patient_confirmed`, `clinician_verified`, or `rejected`. No adapter may write `clinician_verified`.
-6. Files are size/type checked, malware-scanned if available, private by default, and served only through short-lived authorised access. Persist a storage key, not a public URL.
+6. Files are size/type checked, malware-scanned if available, stored in a private Azure Blob container, and served only through authorised streaming access. Persist a blob key, not a public URL.
 7. Demo fallback is part of the adapter contract: touch intake, template summary, and seeded document results remain available when a provider fails.
 
 ## 10. Required Postman maintenance and user test gate

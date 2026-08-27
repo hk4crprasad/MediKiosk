@@ -96,6 +96,31 @@
           "response": []
         },
         {
+          "name": "I-02 POST /intake/responses — onset/duration",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"onset_duration\",\n  \"value\": \"Started 30 minutes ago\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Run only after I-01 confirms onset_duration is next. Record status, response_id, and created fact." },
+          "response": []
+        },
+        {
+          "name": "I-02 POST /intake/responses — breathlessness",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"breathlessness\",\n  \"value\": \"yes\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "This is the positive red-flag fixture. B2 only verifies sequence/fact persistence; B3 verifies the triage result." },
+          "response": []
+        },
+        {
+          "name": "I-02 POST /intake/responses — sweating",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"sweating\",\n  \"value\": \"no\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Optional configured question. Run it because it is currently the exact next question in the chest-discomfort path." },
+          "response": []
+        },
+        {
+          "name": "I-02 POST /intake/responses — allergies",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"allergies\",\n  \"value\": \"No known allergies\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. Use synthetic data only." },
+          "response": []
+        },
+        {
+          "name": "I-02 POST /intake/responses — current medications",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"current_medications\",\n  \"value\": \"No regular medicines\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. I-01 should return null after this response for the configured pathway." },
+          "response": []
+        },
+        {
           "name": "I-03 GET /facts",
           "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/facts", "description": "User verifies fact source, value, and verification status match the submitted answer." },
           "response": []
@@ -111,18 +136,18 @@
       "name": "B3 — Safety and clinician review (user test gate T/R)",
       "item": [
         {
-          "name": "T-01 GET /triage/queue",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/triage/queue", "description": "After the chest-discomfort + breathlessness fixture, user verifies an urgent-review item with evidence-backed red flag." },
+          "name": "T-01 GET /triage/queue — positive safety fixture",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/triage/queue", "description": "Prerequisite: use a fresh synthetic encounter and submit chest_discomfort followed by breathlessness=yes through B2. User verifies exactly one urgent-review item for the encounter, rule_id chest-discomfort-with-breathlessness, non-diagnostic wording, and evidence fact IDs." },
           "response": []
         },
         {
           "name": "T-02 POST /red-flags/{red_flag_id}/acknowledgements",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"note\": \"Synthetic demo acknowledgement\"\n}" }, "url": "{{base_url}}{{api_prefix}}/red-flags/{{red_flag_id}}/acknowledgements", "description": "User verifies acknowledgement is recorded and the flag/rule evidence is not deleted." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"note\": \"Synthetic demo acknowledgement\"\n}" }, "url": "{{base_url}}{{api_prefix}}/red-flags/{{red_flag_id}}/acknowledgements", "description": "Set red_flag_id from T-01. User verifies acknowledged_by/acknowledged_at are populated while active, rule_id, severity, reason, and evidence_fact_ids remain intact. Repeat is idempotent." },
           "response": []
         },
         {
           "name": "R-01 GET /clinician/encounters/{encounter_id}",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}", "description": "User verifies role restriction, structured facts, flags, documents, and latest summary in one clinician view." },
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}", "description": "User verifies staff-only access and a coherent clinician view: encounter state, structured facts, active red flag with evidence, documents, and latest summary. Kiosk token must be denied." },
           "response": []
         }
       ]
@@ -132,7 +157,7 @@
       "item": [
         {
           "name": "D-01 POST /documents upload",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "document_type", "value": "lab_report", "type": "text" }, { "key": "file", "type": "file", "src": "SET_A_SYNTHETIC_PDF_OR_IMAGE" }] }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents", "description": "User supplies a synthetic PDF/JPEG/PNG smaller than the configured limit, then records document_id manually." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "document_type", "value": "lab_report", "type": "text" }, { "key": "file", "type": "file", "src": "SET_A_SYNTHETIC_PDF_OR_IMAGE" }] }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents", "description": "User supplies a valid synthetic PDF/JPEG/PNG smaller than the configured limit and with matching file content. The file must land in the configured private Azure Blob container; record document_id manually. Also verify missing/revoked consent and mismatched MIME/content are rejected." },
           "response": []
         },
         {
@@ -144,6 +169,11 @@
           "name": "D-03 GET /documents/{document_id}",
           "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}", "description": "User verifies authorised metadata retrieval and separately checks unauthorised access is denied." },
           "response": []
+        },
+        {
+          "name": "D-04 GET /documents/{document_id}/content",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/content", "description": "User verifies the authorised original synthetic source file streams from private Azure Blob Storage with its declared content type. A different encounter token must be denied; missing stored content must return a safe not-found response." },
+          "response": []
         }
       ]
     },
@@ -152,7 +182,7 @@
       "item": [
         {
           "name": "S-01 POST /summary/generations",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "Current MVP uses a structured-fact template. User checks that uncaptured facts are stated as Not captured, never invented." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "Server prerequisite: LLM_BASE_URL and LLM_API_KEY are present only in backend/.env; never put them in Postman. Expected configured-provider result: source=openai_compatible, prompt_version=openai-compatible-summary-v1, and gpt-5.6-luna receives no temperature/max_tokens parameters. Expected degraded result: source=template_fallback. User checks that uncaptured facts are Not captured rather than invented." },
           "response": []
         },
         {

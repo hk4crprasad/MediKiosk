@@ -1,9 +1,10 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.models.entities import EncounterStatus, VerificationStatus
+from app.schemas.common import APIModel as BaseModel
 
 
 class QuestionResponse(BaseModel):
