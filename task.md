@@ -18,6 +18,7 @@
 | [X] | B6 — Local FHIR export | Accepted | User reported all current checks complete | F-01–F-02 |
 | [X] | AYU — Dashavidha intake | Accepted | User reports pass | AYU-01–AYU-05 |
 | [X] | PTH — Fever, headache, abdominal-pain pathways | Implemented | Pending user verification | PTH-01–PTH-05 |
+| [X] | KSK — Tablet kiosk controlled-choice flow | Implemented | Pending user verification | KSK-01–KSK-04 |
 
 **Meaning of `scaffolded`:** endpoint code exists but it has not passed its slice’s user-operated Postman acceptance gate and must not be described as complete.
 
@@ -41,6 +42,22 @@
 - [ ] I-04 returns the required-missing response before all mandatory fields are answered.
 - [ ] I-04 succeeds after all required questions in the active pathway are answered.
 - [ ] Every response has `X-Request-ID`; no response reveals unrelated encounter data.
+
+## Active task — KSK Tablet Kiosk Controlled-Choice Flow
+
+| Done | ID | Task | Owner | Status | Done when |
+| --- | --- | --- | --- | --- | --- |
+| [X] | KSK-01 | Make every configured kiosk question a server-controlled single choice | Backend | Implemented; pending user verification | `next-question` returns only `input_type=single_choice` with a non-empty allowed choice list for all five pathways. |
+| [X] | KSK-02 | Reject unconfigured/free-text response values | Backend | Implemented; pending user verification | A response accepts only a configured string value for the current question; `raw_text` remains a non-authoritative excerpt. |
+| [X] | KSK-03 | Deliver tablet-scale choice screens without required keyboard fields | Frontend | Implemented; pending browser/user verification | Start, consent, and intake fit a tablet with large touch targets; intake can complete using only touch choices. |
+| [X] | KSK-04 | Integrate protected next-question audio playback | Frontend | Implemented; pending user verification | Browser requests only the current server-configured prompt, verifies its question-key header, and keeps visible touch/text fallback. |
+
+## KSK user test checklist — Postman/browser
+
+- [ ] KSK-01: after consent, each pathway returns `input_type: "single_choice"` and a non-empty `choices` list; no response uses `free_text` or `boolean`.
+- [ ] KSK-02: submit an unconfigured value for the current question and verify `422`; submit an allowed value and verify the saved fact uses that exact controlled value.
+- [ ] KSK-03: on a tablet, complete a synthetic encounter without opening a keyboard; verify choice buttons are readable/tappable and the optional **Your input** excerpt cannot submit an answer by itself.
+- [ ] KSK-04: with `SPEECH_ADAPTER_MODE=openai_compatible`, use **Play question aloud** and verify the emitted audio's `X-MediKiosk-Question-Key` matches the displayed question. With TTS disabled, verify the text and touch choices remain usable.
 
 ## Active task — B3 Safety, Triage, and Clinician Review
 

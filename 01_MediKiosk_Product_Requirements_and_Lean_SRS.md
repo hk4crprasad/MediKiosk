@@ -101,6 +101,7 @@ MediKiosk is a pre-consultation clinical-intake platform. A patient uses voice o
 | FR-017 | Fallback          | If voice/LLM is unavailable, touch-based structured intake continues.                        | P1           |
 | FR-018 | Pathway coverage  | Chest discomfort, abdominal pain, fever, and headache use independently versioned, controlled pathways. | P0 |
 | FR-019 | Role APIs         | Kiosk/patient, physician, and triage operations enforce separate access boundaries. | P0 |
+| FR-020 | Tablet kiosk      | Essential kiosk answers are server-configured single-choice touch targets; no keyboard is required to complete intake. Any optional typed context is visibly non-authoritative and cannot replace the selected answer. | P0 |
 
 # 7\. Non-functional requirements and acceptance targets
 

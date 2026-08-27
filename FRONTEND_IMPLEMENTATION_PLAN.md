@@ -14,7 +14,7 @@ The frontend renders server data and sends controlled commands. It never chooses
 
 - One application, three route groups; do not maintain three separate frontend codebases.
 - API-driven state: a page can reload from FastAPI without browser-only clinical truth.
-- Touch-first kiosk flow with large targets, plain language, progress indication, and an obvious manual fallback.
+- Tablet-first kiosk flow with large targets, plain language, progress indication, and an obvious manual fallback.
 - Evidence before assertion: doctors can open source document/page and see verification status.
 - Role boundaries are enforced by the API; route guards improve usability but are not security.
 - Never put provider, Blob, or database credentials in `NEXT_PUBLIC_*` variables.
@@ -83,15 +83,16 @@ Generate TypeScript types from `/api/v1/openapi.json` where practical. Keep a sm
 | --- | --- | --- |
 | Start | Language, mode, pathway cards, privacy statement | Create an encounter only after explicit start. |
 | Consent | Plain-language purpose and grant/decline | Intake remains disabled without active consent. |
-| Intake | One API-supplied question, suitable input control, progress, help | Fetch next question after every success. |
-| Voice assist | Record/select audio, transcript preview, “use touch answer” | Do not automatically submit returned transcript. |
+| Intake | One API-supplied single-choice question, 64px+ touch targets, progress, and help | Fetch next question after every success; no keyboard is required. |
+| Voice assist | Play the protected next-question audio, then use touch choices | Audio is a convenience only; text and touch remain available if TTS is disabled. |
+| Optional context | “Your input” below choices for staff/caregiver demo context | Stored only as a response excerpt; it never replaces the controlled answer or becomes AI-verified truth. |
 | Documents | Upload, validation hint, processing state | Keep provider/storage implementation hidden. |
 | Review | Patient facts with source and verification labels | Corrections return to structured questions. |
 | Completion | Submitted state, clear next step, reset button | Clear kiosk token and patient identifiers. |
 
 ### Accessibility baseline
 
-- Minimum 48px touch targets, clear focus, keyboard support, and no time-critical auto-advance.
+- Minimum 64px kiosk touch targets, clear focus, no time-critical auto-advance, and a complete path that does not summon a keyboard.
 - High contrast and readable defaults; use plain language, not clinical jargon.
 - Hindi/English copy catalog from day one; enable speech only after language validation.
 - Visible text fallback for every audio action.

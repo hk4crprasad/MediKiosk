@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field
@@ -11,7 +12,7 @@ class QuestionResponse(BaseModel):
     key: str
     section: str
     prompt: str
-    input_type: str
+    input_type: Literal["single_choice"]
     required: bool
     choices: list[str] = []
     pathway_version: str
@@ -19,7 +20,7 @@ class QuestionResponse(BaseModel):
 
 class IntakeResponseCreateRequest(BaseModel):
     question_key: str = Field(min_length=1, max_length=128)
-    value: str | bool | int | float | list[str]
+    value: str = Field(min_length=1, max_length=128)
     raw_text: str | None = Field(default=None, max_length=2000)
     input_mode: str = Field(default="touch", pattern="^(touch|voice|caregiver|staff)$")
     language: str = Field(default="en", min_length=2, max_length=16)

@@ -65,17 +65,12 @@ async def submit_response(
             status_code=status.HTTP_409_CONFLICT,
             detail={"message": "Response is out of sequence", "expected_question_key": question["key"]},
         )
-    if question["input_type"] == "single_choice" and payload.value not in question["choices"]:
+    if question["input_type"] != "single_choice":
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Configured kiosk question is invalid")
+    if payload.value not in question["choices"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"message": "Response is not an allowed choice", "allowed_choices": question["choices"]},
-        )
-    if question["input_type"] == "boolean" and not (
-        isinstance(payload.value, bool) or payload.value in ("yes", "no", "Yes", "No")
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Boolean questions accept true/false or yes/no only",
         )
 
     normalized_value = {"value": payload.value}

@@ -97,7 +97,7 @@
         },
         {
           "name": "I-02 POST /intake/responses — onset/duration",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"onset_duration\",\n  \"value\": \"Started 30 minutes ago\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Run only after I-01 confirms onset_duration is next. Record status, response_id, and created fact." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"onset_duration\",\n  \"value\": \"started_today\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Run only after I-01 confirms onset_duration is next. The value must be one of the server-returned controlled choices." },
           "response": []
         },
         {
@@ -112,12 +112,12 @@
         },
         {
           "name": "I-02 POST /intake/responses — allergies",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"allergies\",\n  \"value\": \"No known allergies\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. Use synthetic data only." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"allergies\",\n  \"value\": \"no_known_allergies\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. Use the exact controlled value returned by next-question." },
           "response": []
         },
         {
           "name": "I-02 POST /intake/responses — current medications",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"current_medications\",\n  \"value\": \"No regular medicines\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. I-01 should return null after this response for the configured pathway." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"current_medications\",\n  \"value\": \"no_current_medicines\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. I-01 should return null after this response for the configured pathway." },
           "response": []
         },
         {
@@ -252,47 +252,47 @@
         },
         {
           "name": "AYU-04 POST /intake/responses — Prakriti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_prakriti\",\n  \"value\": \"Patient-reported Vata-Pitta tendency\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Synthetic, patient-reported example only; not a diagnosis." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_prakriti\",\n  \"value\": \"mixed\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled, synthetic patient-reported example only; not a diagnosis." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Vikriti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vikriti\",\n  \"value\": \"Patient reports disturbed sleep for two days\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required Dashavidha context, saved as a patient-confirmed clinical fact." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vikriti\",\n  \"value\": \"sleep_or_energy_change\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required controlled Dashavidha context, saved as a patient-confirmed clinical fact." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Sara",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_sara\",\n  \"value\": \"Not sure\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Optional patient-reported field retained for the configured sequence." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_sara\",\n  \"value\": \"not_sure\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Optional controlled field retained for the configured sequence." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Samhanana",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_samhanana\",\n  \"value\": \"Average build\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Synthetic patient-reported context only." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_samhanana\",\n  \"value\": \"medium\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Pramana",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_pramana\",\n  \"value\": \"No measurements provided\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Synthetic patient-reported context only." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_pramana\",\n  \"value\": \"no\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Satmya",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_satmya\",\n  \"value\": \"Regular home-cooked meals suit patient\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Synthetic patient-reported context only." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_satmya\",\n  \"value\": \"regular_routine\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Sattva",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_sattva\",\n  \"value\": \"Patient reports moderate stress tolerance\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Synthetic patient-reported context only." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_sattva\",\n  \"value\": \"sometimes_stressed\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Ahara Shakti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_ahara_shakti\",\n  \"value\": \"Usually normal appetite\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Synthetic patient-reported context only." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_ahara_shakti\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Vyayama Shakti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vyayama_shakti\",\n  \"value\": \"Walks 30 minutes most days\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Synthetic patient-reported context only." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vyayama_shakti\",\n  \"value\": \"moderate\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
           "response": []
         },
         {
@@ -302,12 +302,12 @@
         },
         {
           "name": "AYU-04 POST /intake/responses — Ahara",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_ahara\",\n  \"value\": \"Regular vegetarian meals; no recent changes\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required patient-reported dietary context." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_ahara\",\n  \"value\": \"mostly_home_cooked\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required controlled dietary context." },
           "response": []
         },
         {
           "name": "AYU-04 POST /intake/responses — Vihara",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vihara\",\n  \"value\": \"Sleeps 7 hours; desk-based routine\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required patient-reported routine context." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vihara\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required controlled routine context." },
           "response": []
         },
         {
@@ -322,7 +322,7 @@
         },
         {
           "name": "AYU-04 POST /intake/responses — Nidana",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_nidana\",\n  \"value\": \"Patient associates concern with late work hours\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Final required AYUSH intake field. User verifies next-question returns null after this response." },
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_nidana\",\n  \"value\": \"stress\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Final required controlled AYUSH field. User verifies next-question returns null after this response." },
           "response": []
         },
         {
