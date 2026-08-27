@@ -1,0 +1,191 @@
+{
+  "info": {
+    "_postman_id": "5f47b731-cd39-4f93-979f-836bdf04e29c",
+    "name": "MediKiosk API — Planned Contract",
+    "description": "Living FastAPI contract collection. No endpoint is marked verified by this collection alone. The user must execute each request in Postman and explicitly accept its result before the related backend slice advances. Never export real credentials or patient data with this collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "api_prefix", "value": "/api/v1", "type": "string" },
+    { "key": "staff_access_token", "value": "SET_IN_POSTMAN_ENVIRONMENT", "type": "string" },
+    { "key": "kiosk_session_token", "value": "SET_IN_POSTMAN_ENVIRONMENT", "type": "string" },
+    { "key": "encounter_id", "value": "SET_AFTER_CREATE", "type": "string" },
+    { "key": "document_id", "value": "SET_AFTER_UPLOAD", "type": "string" },
+    { "key": "red_flag_id", "value": "SET_AFTER_RULE_TRIGGER", "type": "string" },
+    { "key": "consent_id", "value": "SET_AFTER_CONSENT", "type": "string" },
+    { "key": "export_id", "value": "SET_AFTER_EXPORT", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "B0 — Foundation (user test gate H-01 to H-02)",
+      "item": [
+        {
+          "name": "H-01 GET /health",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/health", "description": "User check: process liveness only; must not call external AI providers." },
+          "response": []
+        },
+        {
+          "name": "H-02 GET /ready",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/ready", "description": "User check: readiness reports database/migration availability without disclosing secrets." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "B1 — Auth, encounter, consent (user test gate A/E/C)",
+      "item": [
+        {
+          "name": "A-01 POST /auth/login",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@medikiosk.local\",\n  \"password\": \"SET_IN_POSTMAN_ENVIRONMENT\"\n}" }, "url": "{{base_url}}{{api_prefix}}/auth/login", "description": "User records status and request ID; set the returned staff token manually in the Postman environment." },
+          "response": []
+        },
+        {
+          "name": "A-03 GET /auth/me",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/auth/me", "description": "User verifies only expected identity and role fields are exposed." },
+          "response": []
+        },
+        {
+          "name": "A-04 POST /admin/users — provision test role",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"triage.synthetic@medikiosk.local\",\n  \"password\": \"SET_A_SYNTHETIC_TEST_PASSWORD\",\n  \"role\": \"triage\"\n}" }, "url": "{{base_url}}{{api_prefix}}/admin/users", "description": "User verifies admin-only access and records duplicate-email/unauthorised behavior separately. Do not use a real user or password." },
+          "response": []
+        },
+        {
+          "name": "E-01 POST /encounters",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\n    \"display_name\": \"Synthetic Patient A\",\n    \"birth_year\": 1980,\n    \"sex\": \"female\",\n    \"preferred_language\": \"en\"\n  },\n  \"mode\": \"kiosk\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Planned sample only. User sets encounter_id and kiosk_session_token manually after examining the response." },
+          "response": []
+        },
+        {
+          "name": "E-02 GET /encounters/{encounter_id}",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}", "description": "User tests permitted kiosk access and separately records a denied cross-encounter attempt." },
+          "response": []
+        },
+        {
+          "name": "C-01 POST /encounters/{encounter_id}/consents",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"consent_type\": \"clinical_intake\",\n  \"version\": \"v1\",\n  \"language\": \"en\",\n  \"granted\": true\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents", "description": "User verifies immutable, versioned consent receipt; set consent_id manually from the response. Do not use real consent text until approved." },
+          "response": []
+        },
+        {
+          "name": "C-02 GET /encounters/{encounter_id}/consents",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents", "description": "User verifies consent history/current state and kiosk authorisation behavior." },
+          "response": []
+        },
+        {
+          "name": "C-03 POST /consents/{consent_id}/revocations",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents/{{consent_id}}/revocations", "description": "Run only on a separate synthetic encounter after the intake path test. User verifies the receipt remains visible, has revoked_at, and further intake is blocked." },
+          "response": []
+        },
+        {
+          "name": "A-02 POST /auth/logout — run last",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/auth/logout", "description": "Run last. User then re-runs A-03 with the same token and records the expected unauthorised result, then logs in again for later slices." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "B2 — Controlled intake (user test gate I-01 to I-04)",
+      "item": [
+        {
+          "name": "I-01 GET /intake/next-question",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/next-question", "description": "User verifies that this first requires consent, then returns the next configured question without AI-generated content." },
+          "response": []
+        },
+        {
+          "name": "I-02 POST /intake/responses — chief complaint",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"chief_complaint\",\n  \"value\": \"chest_discomfort\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "User repeats this request only as the pathway permits. Record the fact ID and status; do not infer test success from this collection." },
+          "response": []
+        },
+        {
+          "name": "I-03 GET /facts",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/facts", "description": "User verifies fact source, value, and verification status match the submitted answer." },
+          "response": []
+        },
+        {
+          "name": "I-04 POST /submit",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/submit", "description": "User first verifies a missing-field rejection, completes all required questions through I-01/I-02, then verifies final submission." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "B3 — Safety and clinician review (user test gate T/R)",
+      "item": [
+        {
+          "name": "T-01 GET /triage/queue",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/triage/queue", "description": "After the chest-discomfort + breathlessness fixture, user verifies an urgent-review item with evidence-backed red flag." },
+          "response": []
+        },
+        {
+          "name": "T-02 POST /red-flags/{red_flag_id}/acknowledgements",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"note\": \"Synthetic demo acknowledgement\"\n}" }, "url": "{{base_url}}{{api_prefix}}/red-flags/{{red_flag_id}}/acknowledgements", "description": "User verifies acknowledgement is recorded and the flag/rule evidence is not deleted." },
+          "response": []
+        },
+        {
+          "name": "R-01 GET /clinician/encounters/{encounter_id}",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}", "description": "User verifies role restriction, structured facts, flags, documents, and latest summary in one clinician view." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "B4 — Documents (user test gate D-01 to D-03)",
+      "item": [
+        {
+          "name": "D-01 POST /documents upload",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "document_type", "value": "lab_report", "type": "text" }, { "key": "file", "type": "file", "src": "SET_A_SYNTHETIC_PDF_OR_IMAGE" }] }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents", "description": "User supplies a synthetic PDF/JPEG/PNG smaller than the configured limit, then records document_id manually." },
+          "response": []
+        },
+        {
+          "name": "D-02 GET /encounter documents",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents", "description": "User verifies only this encounter's document metadata and processing state are listed." },
+          "response": []
+        },
+        {
+          "name": "D-03 GET /documents/{document_id}",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}", "description": "User verifies authorised metadata retrieval and separately checks unauthorised access is denied." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "B5 — Summary and physician verification (user test gate S-01 to S-04)",
+      "item": [
+        {
+          "name": "S-01 POST /summary/generations",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "Current MVP uses a structured-fact template. User checks that uncaptured facts are stated as Not captured, never invented." },
+          "response": []
+        },
+        {
+          "name": "S-02 GET /summary",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary", "description": "User verifies the current draft and role restrictions." },
+          "response": []
+        },
+        {
+          "name": "S-03 PATCH /summary",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"text\": \"Clinician-edited synthetic summary.\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary", "description": "User verifies physician-only edit and persistence through S-02." },
+          "response": []
+        },
+        {
+          "name": "S-04 POST /summary/verifications",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"decision\": \"accept\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/verifications", "description": "User verifies explicit accept/reject behavior and encounter verification state." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "B6 — FHIR export (user test gate F-01 to F-02)",
+      "item": [
+        {
+          "name": "F-01 POST /fhir/exports",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/fhir/exports", "description": "User verifies the local structural validation result and records export_id manually. This is not a live ABDM claim." },
+          "response": []
+        },
+        {
+          "name": "F-02 GET /fhir/exports/{export_id}",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/fhir/exports/{{export_id}}", "description": "User verifies retrieval is scoped to the same encounter and staff role." },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

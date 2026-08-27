@@ -1,0 +1,1 @@
+"""MediKiosk FastAPI backend package."""

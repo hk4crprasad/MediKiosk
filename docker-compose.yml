@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: medikiosk
+      POSTGRES_USER: medikiosk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medikiosk -d medikiosk"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://medikiosk:${POSTGRES_PASSWORD}@postgres:5432/medikiosk
+      UPLOAD_DIR: /data/uploads
+      AUTO_CREATE_SCHEMA: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - medikiosk_uploads:/data/uploads
+    networks: [internal]
+
+volumes:
+  postgres_data:
+  medikiosk_uploads:
+
+networks:
+  internal:
+    driver: bridge
