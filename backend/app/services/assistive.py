@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import fitz
-from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
+from openai import APIConnectionError, APIError, APITimeoutError, AsyncAzureOpenAI, AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,14 +114,18 @@ def mock_document_extraction(mode: str, fixture_id: str) -> AdapterOutput:
 
 
 class OpenAICompatibleSpeechAdapter:
-    """Audio adapter using AsyncOpenAI against an OpenAI-compatible base URL."""
+    """Azure STT adapter with the existing generic OpenAI-compatible TTS client."""
 
     def __init__(self, settings: Settings):
         self._settings = settings
 
     @property
     def configured_for_stt(self) -> bool:
-        return bool(self._base_url and self._api_key and self._settings.azure_openai_stt_deployment)
+        return bool(
+            self._settings.azure_openai_endpoint
+            and self._api_key
+            and self._settings.azure_openai_stt_deployment
+        )
 
     @property
     def configured_for_tts(self) -> bool:
@@ -142,6 +146,15 @@ class OpenAICompatibleSpeechAdapter:
             timeout=self._settings.llm_timeout_seconds,
         )
 
+    def _stt_client(self) -> AsyncAzureOpenAI:
+        """Use Azure's deployment-style audio endpoint, not the generic `/openai/v1` route."""
+        return AsyncAzureOpenAI(
+            azure_endpoint=self._settings.azure_openai_endpoint,
+            api_key=self._api_key,
+            api_version=self._settings.azure_openai_api_version,
+            timeout=self._settings.llm_timeout_seconds,
+        )
+
     async def transcribe(self, content: bytes, filename: str, mime_type: str, language: str) -> AdapterOutput:
         if not self.configured_for_stt:
             raise DomainError(
@@ -149,7 +162,7 @@ class OpenAICompatibleSpeechAdapter:
                 message="OpenAI-compatible speech transcription is not configured; use touch input.",
                 status_code=503,
             )
-        client = self._client()
+        client = self._stt_client()
         try:
             response = await client.audio.transcriptions.create(
                 model=self._settings.azure_openai_stt_deployment,

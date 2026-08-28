@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     llm_api_key: str | None = None
     llm_model: str = "gpt-5.6-luna"
     llm_timeout_seconds: float = 30.0
+    azure_openai_endpoint: str | None = None
+    azure_openai_api_version: str = "2024-10-21"
     speech_adapter_mode: str = "disabled"
     ocr_adapter_mode: str = "disabled"
     azure_openai_stt_deployment: str | None = None
