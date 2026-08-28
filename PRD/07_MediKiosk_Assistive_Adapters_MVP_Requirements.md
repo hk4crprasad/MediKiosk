@@ -12,7 +12,7 @@ Provide replaceable API boundaries for speech-to-text and OCR/document extractio
 
 | ID | Requirement | MVP acceptance |
 | --- | --- | --- |
-| INT-01 | Speech transcriptions are encounter-scoped and require active clinical-intake consent. | Authorised callers can request a configured OpenAI-compatible transcription; missing/revoked consent and other encounter tokens are denied. |
+| INT-01 | Speech transcriptions are encounter-scoped and require active clinical-intake consent. | Authorised callers can submit signature-validated browser WebM/Opus, Ogg/Opus, M4A/MP4, WAV, or MP3 audio to a configured OpenAI-compatible transcription; missing/revoked consent and other encounter tokens are denied. |
 | INT-02 | Speech output is evidence only. | A transcription returns transcript, language, confidence, provider, and status, but creates no patient response or clinical fact. |
 | INT-03 | Vision extraction is document-scoped and preserves provenance. | Luna receives only a private JPEG/PNG image through the OpenAI-compatible adapter; raw extracted text, entities, provider, and document reference are persisted as unverified evidence. |
 | INT-04 | OCR output is unverified and cannot directly enter a summary or FHIR export. | No `ClinicalFact` is created from an extraction; clinician verification remains a separate workflow. |
@@ -26,6 +26,7 @@ Provide replaceable API boundaries for speech-to-text and OCR/document extractio
 
 - Only synthetic audio/documents are used for demo verification.
 - Raw audio is not stored by this MVP. A provider integration must have a separate retention, consent, and deletion design before production use.
+- Browser recording must preserve the container and MIME type actually emitted by `MediaRecorder`; relabelling WebM/Ogg/MP4 bytes as WAV is prohibited. The API rejects mismatched declared types and file signatures.
 - Mock fixtures are deterministic and visibly labelled `mock`; they are not a claim about a supplied audio file or document.
 - The API does not diagnose or infer medications. An extraction never creates a clinical fact. A physician may explicitly promote a selected, reviewed extraction item into a `clinician_verified` fact; the audit event and original document/extraction remain linked.
 - Production ASR/OCR providers must be implemented behind the same adapter interfaces, with provider-specific privacy/security review and new acceptance gates.

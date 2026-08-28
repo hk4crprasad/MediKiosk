@@ -1,20 +1,24 @@
-from app.core.config import get_settings
-from app.services.openai_compatible import OpenAICompatibleSummaryGenerator, PROMPT_VERSION
-from app.prompting.registry import get_prompt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models import ClinicalFact, Summary
+from app.prompting.registry import get_prompt
+from app.services.openai_compatible import PROMPT_VERSION, OpenAICompatibleSummaryGenerator
 
 
 async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[dict, str]:
     facts = (
         await session.scalars(
-            select(ClinicalFact).where(ClinicalFact.encounter_id == encounter_id).order_by(ClinicalFact.created_at.asc())
+            select(ClinicalFact)
+            .where(ClinicalFact.encounter_id == encounter_id)
+            .order_by(ClinicalFact.created_at.asc())
         )
     ).all()
     values = {fact.fact_type: fact.value.get("value") for fact in facts}
-    ayush_values = {key.removeprefix("ayush_"): value for key, value in values.items() if key.startswith("ayush_")}
+    ayush_values = {
+        key.removeprefix("ayush_"): value for key, value in values.items() if key.startswith("ayush_")
+    }
     clinical_pathway_values_present = any(
         key in values for key in ("chief_complaint", "onset_duration", "allergies", "current_medications")
     )
@@ -27,10 +31,11 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
         return content, f"AYUSH intake (patient-reported, pending clinician review): {ayush_text}."
 
     base_keys = {"chief_complaint", "onset_duration", "allergies", "current_medications"}
+    chest_hpi_keys = {"chest_onset", "chest_character", "chest_radiation", "chest_severity", "chest_timing"}
     associated_symptoms = {
         key: value
         for key, value in values.items()
-        if key not in base_keys and not key.startswith("ayush_")
+        if key not in base_keys | chest_hpi_keys and not key.startswith("ayush_")
     }
     content = {
         "chief_complaint": values.get("chief_complaint", "Not captured"),
@@ -39,20 +44,38 @@ async def build_summary_content(session: AsyncSession, encounter_id) -> tuple[di
         "allergies": values.get("allergies", "Not captured"),
         "current_medications": values.get("current_medications", "Not captured"),
     }
+    if values.get("chief_complaint") == "chest_discomfort":
+        content["hpi"] = {
+            "onset": values.get("chest_onset", "Not captured"),
+            "character": values.get("chest_character", "Not captured"),
+            "radiation": values.get("chest_radiation", "Not captured"),
+            "severity": values.get("chest_severity", "Not captured"),
+            "timing": values.get("chest_timing", "Not captured"),
+        }
     if ayush_values:
         content["ayush_assessment"] = ayush_values
 
-    symptom_text = "; ".join(
-        f"{key.replace('_', ' ')}: {value if value is not None else 'Not captured'}"
-        for key, value in associated_symptoms.items()
-    ) or "Not captured"
-    text = (
-        f"Chief complaint: {content['chief_complaint']}. "
-        f"Onset/duration: {content['onset_duration']}. "
-        f"Associated details: {symptom_text}. "
-        f"Allergies: {content['allergies']}. "
-        f"Current medications: {content['current_medications']}."
+    symptom_text = (
+        "; ".join(
+            f"{key.replace('_', ' ')}: {value if value is not None else 'Not captured'}"
+            for key, value in associated_symptoms.items()
+        )
+        or "Not captured"
     )
+    if "hpi" in content:
+        hpi_text = "; ".join(f"{key}: {value}" for key, value in content["hpi"].items())
+        text = (
+            f"Chief complaint: {content['chief_complaint']}. HPI: {hpi_text}. "
+            f"Associated details: {symptom_text}. Allergies: {content['allergies']}. "
+            f"Current medications: {content['current_medications']}."
+        )
+    else:
+        text = (
+            f"Chief complaint: {content['chief_complaint']}. "
+            f"Onset/duration: {content['onset_duration']}. "
+            f"Associated details: {symptom_text}. Allergies: {content['allergies']}. "
+            f"Current medications: {content['current_medications']}."
+        )
     if ayush_values:
         ayush_text = "; ".join(
             f"{key.replace('_', ' ')}: {value if value is not None else 'Not captured'}"

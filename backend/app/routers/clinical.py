@@ -2,14 +2,20 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import exists, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.security import Principal, require_staff
 from app.models import ClinicalFact, Document, Encounter, Patient, RedFlag, Summary
 from app.models.entities import EncounterStatus
-from app.schemas.clinical import AcknowledgeRequest, ClinicianEncounterResponse, EncounterListItem, RedFlagResponse, TriageQueueItem
+from app.schemas.clinical import (
+    AcknowledgeRequest,
+    ClinicianEncounterResponse,
+    EncounterListItem,
+    RedFlagResponse,
+    TriageQueueItem,
+)
 from app.schemas.documents import DocumentResponse
 from app.schemas.encounters import EncounterResponse
 from app.schemas.intake import FactResponse
@@ -24,7 +30,8 @@ red_flag_router = APIRouter(prefix="/red-flags", tags=["triage"])
 
 @triage_router.get("/queue", response_model=list[TriageQueueItem])
 async def triage_queue(
-    _: Principal = Depends(require_staff("admin", "triage", "physician")), session: AsyncSession = Depends(get_session)
+    _: Principal = Depends(require_staff("admin", "triage", "physician")),
+    session: AsyncSession = Depends(get_session),
 ) -> list[TriageQueueItem]:
     rows = (
         await session.execute(
@@ -84,6 +91,7 @@ async def list_all_encounters(
         for encounter, patient, flag_count in rows
     ]
 
+
 @red_flag_router.post("/{red_flag_id}/acknowledgements", response_model=RedFlagResponse)
 async def acknowledge_red_flag(
     red_flag_id: UUID,
@@ -122,14 +130,24 @@ async def clinician_encounter(
     if encounter.status == EncounterStatus.submitted:
         encounter.status = EncounterStatus.in_review
     facts = (
-        await session.scalars(select(ClinicalFact).where(ClinicalFact.encounter_id == encounter_id).order_by(ClinicalFact.created_at))
+        await session.scalars(
+            select(ClinicalFact)
+            .where(ClinicalFact.encounter_id == encounter_id)
+            .order_by(ClinicalFact.created_at)
+        )
     ).all()
     flags = (await session.scalars(select(RedFlag).where(RedFlag.encounter_id == encounter_id))).all()
     documents = (await session.scalars(select(Document).where(Document.encounter_id == encounter_id))).all()
     summary = await session.scalar(
         select(Summary).where(Summary.encounter_id == encounter_id).order_by(Summary.created_at.desc())
     )
-    await write_audit(session, "clinician.encounter_viewed", actor_id=principal.subject, encounter_id=encounter_id, request=request)
+    await write_audit(
+        session,
+        "clinician.encounter_viewed",
+        actor_id=principal.subject,
+        encounter_id=encounter_id,
+        request=request,
+    )
     await session.commit()
     return ClinicianEncounterResponse(
         encounter=EncounterResponse.model_validate(encounter),

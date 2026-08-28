@@ -5,12 +5,19 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.clinical_config.pathways import localise_fact_display, localise_question
 from app.core.database import get_session
 from app.core.security import Principal, get_principal
-from app.models import ClinicalFact
+from app.models import ClinicalFact, Patient
 from app.models.entities import EncounterStatus
 from app.schemas.encounters import EncounterResponse
-from app.schemas.intake import FactResponse, IntakeResponseCreateRequest, IntakeResponseResult, QuestionResponse, SubmitResponse
+from app.schemas.intake import (
+    FactResponse,
+    IntakeResponseCreateRequest,
+    IntakeResponseResult,
+    QuestionResponse,
+    SubmitResponse,
+)
 from app.services.access import ensure_encounter_access, get_encounter_or_404
 from app.services.audit import write_audit
 from app.services.intake import ensure_active_consent, next_question, required_missing, submit_response
@@ -20,7 +27,9 @@ router = APIRouter(prefix="/encounters/{encounter_id}", tags=["intake"])
 
 @router.get("/intake/next-question", response_model=QuestionResponse | None)
 async def get_next_question(
-    encounter_id: UUID, principal: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)
+    encounter_id: UUID,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> QuestionResponse | None:
     ensure_encounter_access(principal, encounter_id)
     encounter = await get_encounter_or_404(session, encounter_id)
@@ -28,7 +37,11 @@ async def get_next_question(
     question = await next_question(session, encounter)
     if question is None:
         return None
-    return QuestionResponse(**question, pathway_version=encounter.pathway_version)
+    patient = await session.get(Patient, encounter.patient_id)
+    language = patient.preferred_language if patient else "en"
+    return QuestionResponse(
+        **localise_question(question, language), pathway_version=encounter.pathway_version
+    )
 
 
 @router.post("/intake/responses", response_model=IntakeResponseResult, status_code=status.HTTP_201_CREATED)
@@ -61,15 +74,32 @@ async def create_intake_response(
 
 @router.get("/facts", response_model=list[FactResponse])
 async def list_facts(
-    encounter_id: UUID, principal: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)
+    encounter_id: UUID,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> list[FactResponse]:
     ensure_encounter_access(principal, encounter_id)
+    encounter = await get_encounter_or_404(session, encounter_id)
+    patient = await session.get(Patient, encounter.patient_id)
+    language = patient.preferred_language if patient else "en"
     facts = (
         await session.scalars(
-            select(ClinicalFact).where(ClinicalFact.encounter_id == encounter_id).order_by(ClinicalFact.created_at.asc())
+            select(ClinicalFact)
+            .where(ClinicalFact.encounter_id == encounter_id)
+            .order_by(ClinicalFact.created_at.asc())
         )
     ).all()
-    return [FactResponse.model_validate(fact) for fact in facts]
+    responses = []
+    for fact in facts:
+        display_label, display_value = localise_fact_display(
+            fact.fact_type, fact.value.get("value"), language
+        )
+        responses.append(
+            FactResponse.model_validate(fact).model_copy(
+                update={"display_label": display_label, "display_value": display_value}
+            )
+        )
+    return responses
 
 
 @router.post("/submit", response_model=SubmitResponse)

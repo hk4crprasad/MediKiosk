@@ -23,7 +23,9 @@ async def create_export(
 ) -> FhirExportResponse:
     encounter = await get_encounter_or_404(session, encounter_id)
     export = await create_local_export(session, encounter)
-    await write_audit(session, "fhir.exported", actor_id=principal.subject, encounter_id=encounter_id, request=request)
+    await write_audit(
+        session, "fhir.exported", actor_id=principal.subject, encounter_id=encounter_id, request=request
+    )
     await session.commit()
     await session.refresh(export)
     return FhirExportResponse.model_validate(export)

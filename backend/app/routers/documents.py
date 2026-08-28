@@ -35,7 +35,11 @@ def has_expected_file_signature(content: bytes, mime_type: str) -> bool:
     return content.startswith(signatures[mime_type])
 
 
-@router.post("/encounters/{encounter_id}/documents", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/encounters/{encounter_id}/documents",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_document(
     encounter_id: UUID,
     request: Request,
@@ -48,9 +52,14 @@ async def upload_document(
     await get_encounter_or_404(session, encounter_id)
     await ensure_active_consent(session, encounter_id)
     if file.content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only PDF, JPEG, and PNG files are accepted")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only PDF, JPEG, and PNG files are accepted",
+        )
     if document_type not in {"prescription", "lab_report", "discharge_summary", "other"}:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported document type")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported document type"
+        )
     settings = get_settings()
     content = await file.read(settings.max_upload_bytes + 1)
     if not content:
@@ -58,7 +67,10 @@ async def upload_document(
     if len(content) > settings.max_upload_bytes:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File is too large")
     if not has_expected_file_signature(content, file.content_type):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="File content does not match its declared type")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="File content does not match its declared type",
+        )
     storage_key = f"{encounter_id}/{uuid4()}-{safe_filename(file.filename or 'upload')}"
     storage = AzureBlobDocumentStorage(settings)
     await storage.upload(storage_key, content, file.content_type)
@@ -93,18 +105,24 @@ async def upload_document(
 
 @router.get("/encounters/{encounter_id}/documents", response_model=list[DocumentResponse])
 async def list_documents(
-    encounter_id: UUID, principal: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)
+    encounter_id: UUID,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> list[DocumentResponse]:
     ensure_encounter_access(principal, encounter_id)
     documents = (
-        await session.scalars(select(Document).where(Document.encounter_id == encounter_id).order_by(Document.created_at.desc()))
+        await session.scalars(
+            select(Document).where(Document.encounter_id == encounter_id).order_by(Document.created_at.desc())
+        )
     ).all()
     return [DocumentResponse.model_validate(document) for document in documents]
 
 
 @router.get("/documents/{document_id}", response_model=DocumentResponse)
 async def get_document(
-    document_id: UUID, principal: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)
+    document_id: UUID,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> DocumentResponse:
     document = await session.get(Document, document_id)
     if document is None:
@@ -115,7 +133,9 @@ async def get_document(
 
 @router.get("/documents/{document_id}/content", response_class=StreamingResponse)
 async def download_document_content(
-    document_id: UUID, principal: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)
+    document_id: UUID,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> StreamingResponse:
     """Return the original source file only after encounter-scoped authorisation."""
     document = await session.get(Document, document_id)
@@ -185,7 +205,9 @@ async def document_timeline(
                     fact_page_numbers[fact_id] = page_number
         timeline.append(
             DocumentTimelineItem(
-                event_type="review" if artifact.artifact_type == "document_extraction_review" else "extraction",
+                event_type="review"
+                if artifact.artifact_type == "document_extraction_review"
+                else "extraction",
                 occurred_at=artifact.created_at,
                 document_id=artifact.document_id,
                 artifact_id=artifact.id,

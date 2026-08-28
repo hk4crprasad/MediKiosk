@@ -24,7 +24,11 @@ class PromptSpec:
 
 _PROMPT_DIRECTORY = Path(__file__).parent / "prompts"
 _PROMPT_FILES = {
-    "summary": ("summary.clinician_draft", "openai-compatible-summary-v1", "summary.openai-compatible-summary-v1.md"),
+    "summary": (
+        "summary.clinician_draft",
+        "openai-compatible-summary-v1",
+        "summary.openai-compatible-summary-v1.md",
+    ),
     "document_extraction": (
         "document_extraction.visible_text",
         "luna-vision-v1",

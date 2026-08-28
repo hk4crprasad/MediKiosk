@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field
@@ -11,7 +12,7 @@ class PatientInput(BaseModel):
     display_name: str | None = Field(default=None, max_length=200)
     birth_year: int | None = Field(default=None, ge=1900, le=2100)
     sex: str | None = Field(default=None, max_length=32)
-    preferred_language: str = Field(default="en", min_length=2, max_length=16)
+    preferred_language: Literal["en", "hi"] = "en"
     abha_identifier: str | None = Field(default=None, max_length=64)
 
 
@@ -42,7 +43,7 @@ class EncounterCreatedResponse(BaseModel):
 class ConsentCreateRequest(BaseModel):
     consent_type: str = Field(default="clinical_intake", max_length=64)
     version: str = Field(default="v1", max_length=64)
-    language: str = Field(default="en", min_length=2, max_length=16)
+    language: Literal["en", "hi"] = "en"
     granted: bool
 
 
@@ -51,10 +52,11 @@ class ConsentResponse(BaseModel):
     encounter_id: UUID
     consent_type: str
     version: str
-    language: str
+    language: Literal["en", "hi"]
     granted: bool
     created_at: datetime
+    revoked_at: datetime | None = None
 
 
 class ConsentRevocationResponse(ConsentResponse):
-    revoked_at: datetime
+    pass

@@ -82,7 +82,7 @@ MediKiosk is a pre-consultation clinical-intake platform. A patient uses voice o
 
 | **ID** | **Area**          | **Requirement**                                                                              | **Priority** |
 | ------ | ----------------- | -------------------------------------------------------------------------------------------- | ------------ |
-| FR-001 | Language          | Patient can select supported language before intake.                                         | P0           |
+| FR-001 | Language          | Patient can complete the kiosk in English or Hindi; API questions and controlled answer labels use the selected language while persisted values remain stable. | P0 |
 | FR-002 | Accessibility     | Essential questions support touch; audio prompts are available.                              | P0           |
 | FR-003 | Voice             | System captures voice and displays transcript/understanding for confirmation when uncertain. | P0           |
 | FR-004 | History           | System stores required general clinical-history sections in structured form.                 | P0           |
@@ -98,6 +98,7 @@ MediKiosk is a pre-consultation clinical-intake platform. A patient uses voice o
 | FR-014 | Consent           | Collection/sharing is gated by explicit consent state.                                       | P0           |
 | FR-015 | Audit             | Key clinical edits, consent changes, exports, and access are recorded.                       | P1           |
 | FR-016 | Interoperability  | Internal data can be transformed into FHIR-compatible export through an adapter.             | P1           |
+| FR-017 | Kiosk privacy     | The kiosk clears its local session after submission or inactivity; revoking consent ends device access but does not claim to delete already recorded clinical/audit evidence. | P0 |
 | FR-017 | Fallback          | If voice/LLM is unavailable, touch-based structured intake continues.                        | P1           |
 | FR-018 | Pathway coverage  | Chest discomfort, abdominal pain, fever, and headache use independently versioned, controlled pathways. | P0 |
 | FR-019 | Role APIs         | Kiosk/patient, physician, and triage operations enforce separate access boundaries. | P0 |

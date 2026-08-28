@@ -5,16 +5,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.clinical_config.pathways import is_supported_pathway, supported_pathway_versions
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.security import Principal, create_token, get_principal
-from app.clinical_config.pathways import is_supported_pathway, supported_pathway_versions
 from app.models import Consent, Encounter, Patient
 from app.models.entities import EncounterStatus
 from app.schemas.encounters import (
     ConsentCreateRequest,
-    ConsentRevocationResponse,
     ConsentResponse,
+    ConsentRevocationResponse,
     EncounterCreatedResponse,
     EncounterCreateRequest,
     EncounterResponse,
@@ -32,7 +32,10 @@ async def create_encounter(
     if not is_supported_pathway(payload.pathway_version):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"message": "Unsupported pathway version", "supported_pathway_versions": supported_pathway_versions()},
+            detail={
+                "message": "Unsupported pathway version",
+                "supported_pathway_versions": supported_pathway_versions(),
+            },
         )
     patient = Patient(**payload.patient.model_dump())
     session.add(patient)
@@ -49,7 +52,13 @@ async def create_encounter(
         settings.kiosk_token_expire_minutes,
         encounter_id=encounter.id,
     )
-    await write_audit(session, "encounter.created", encounter_id=encounter.id, request=request, metadata={"mode": payload.mode})
+    await write_audit(
+        session,
+        "encounter.created",
+        encounter_id=encounter.id,
+        request=request,
+        metadata={"mode": payload.mode},
+    )
     await session.commit()
     await session.refresh(encounter)
     return EncounterCreatedResponse(
@@ -61,7 +70,9 @@ async def create_encounter(
 
 @router.get("/{encounter_id}", response_model=EncounterResponse)
 async def get_encounter(
-    encounter_id: UUID, principal: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)
+    encounter_id: UUID,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> EncounterResponse:
     ensure_encounter_access(principal, encounter_id)
     encounter = await get_encounter_or_404(session, encounter_id)
@@ -86,10 +97,16 @@ async def create_consent(
         )
     )
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Consent receipt already exists for this version")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Consent receipt already exists for this version"
+        )
     consent = Consent(encounter_id=encounter_id, **payload.model_dump())
     session.add(consent)
-    if payload.consent_type == "clinical_intake" and payload.granted and encounter.status == EncounterStatus.draft:
+    if (
+        payload.consent_type == "clinical_intake"
+        and payload.granted
+        and encounter.status == EncounterStatus.draft
+    ):
         encounter.status = EncounterStatus.in_progress
     await write_audit(
         session,
@@ -97,7 +114,11 @@ async def create_consent(
         actor_id=principal.subject if principal.token_type == "staff" else None,
         encounter_id=encounter_id,
         request=request,
-        metadata={"consent_type": payload.consent_type, "version": payload.version, "granted": payload.granted},
+        metadata={
+            "consent_type": payload.consent_type,
+            "version": payload.version,
+            "granted": payload.granted,
+        },
     )
     await session.commit()
     await session.refresh(consent)
@@ -106,12 +127,16 @@ async def create_consent(
 
 @router.get("/{encounter_id}/consents", response_model=list[ConsentResponse])
 async def list_consents(
-    encounter_id: UUID, principal: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)
+    encounter_id: UUID,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> list[ConsentResponse]:
     ensure_encounter_access(principal, encounter_id)
     await get_encounter_or_404(session, encounter_id)
     consents = (
-        await session.scalars(select(Consent).where(Consent.encounter_id == encounter_id).order_by(Consent.created_at.asc()))
+        await session.scalars(
+            select(Consent).where(Consent.encounter_id == encounter_id).order_by(Consent.created_at.asc())
+        )
     ).all()
     return [ConsentResponse.model_validate(consent) for consent in consents]
 
@@ -125,7 +150,9 @@ async def revoke_consent(
     session: AsyncSession = Depends(get_session),
 ) -> ConsentRevocationResponse:
     ensure_encounter_access(principal, encounter_id)
-    consent = await session.scalar(select(Consent).where(Consent.id == consent_id, Consent.encounter_id == encounter_id))
+    consent = await session.scalar(
+        select(Consent).where(Consent.id == consent_id, Consent.encounter_id == encounter_id)
+    )
     if consent is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Consent receipt not found")
     if consent.revoked_at is None:

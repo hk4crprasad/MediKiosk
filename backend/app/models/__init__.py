@@ -17,6 +17,19 @@ from app.models.entities import (
 )
 
 __all__ = [
-    "AssistiveArtifact", "AuditEvent", "ClinicalFact", "Consent", "Document", "Encounter", "FhirExport", "Patient",
-    "PatientResponse", "PhysicianRevision", "QuestionAudioPrompt", "RedFlag", "RevokedToken", "Summary", "User",
+    "AssistiveArtifact",
+    "AuditEvent",
+    "ClinicalFact",
+    "Consent",
+    "Document",
+    "Encounter",
+    "FhirExport",
+    "Patient",
+    "PatientResponse",
+    "PhysicianRevision",
+    "QuestionAudioPrompt",
+    "RedFlag",
+    "RevokedToken",
+    "Summary",
+    "User",
 ]

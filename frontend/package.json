@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:demo": "NEXT_PUBLIC_KIOSK_IDLE_TIMEOUT_MS=30000 npm run build -- --webpack && NEXT_PUBLIC_KIOSK_IDLE_TIMEOUT_MS=30000 python tests/kiosk_demo_e2e.py"
   },
   "dependencies": {
     "next": "16.3.3",

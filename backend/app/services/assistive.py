@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import fitz
-
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
@@ -93,7 +92,9 @@ def mock_transcription(mode: str, fixture_id: str, language: str) -> AdapterOutp
     require_mock_mode(mode, "speech")
     output = SPEECH_FIXTURES.get(fixture_id)
     if output is None:
-        raise DomainError(code="unknown_speech_fixture", message="Unknown synthetic speech fixture", status_code=422)
+        raise DomainError(
+            code="unknown_speech_fixture", message="Unknown synthetic speech fixture", status_code=422
+        )
     return AdapterOutput(
         raw_text=output.raw_text,
         structured_data=output.structured_data,
@@ -106,7 +107,9 @@ def mock_document_extraction(mode: str, fixture_id: str) -> AdapterOutput:
     require_mock_mode(mode, "ocr")
     output = OCR_FIXTURES.get(fixture_id)
     if output is None:
-        raise DomainError(code="unknown_ocr_fixture", message="Unknown synthetic OCR fixture", status_code=422)
+        raise DomainError(
+            code="unknown_ocr_fixture", message="Unknown synthetic OCR fixture", status_code=422
+        )
     return output
 
 
@@ -118,19 +121,11 @@ class OpenAICompatibleSpeechAdapter:
 
     @property
     def configured_for_stt(self) -> bool:
-        return bool(
-            self._base_url
-            and self._api_key
-            and self._settings.azure_openai_stt_deployment
-        )
+        return bool(self._base_url and self._api_key and self._settings.azure_openai_stt_deployment)
 
     @property
     def configured_for_tts(self) -> bool:
-        return bool(
-            self._base_url
-            and self._api_key
-            and self._settings.azure_openai_tts_deployment
-        )
+        return bool(self._base_url and self._api_key and self._settings.azure_openai_tts_deployment)
 
     @property
     def _base_url(self) -> str | None:
@@ -238,7 +233,10 @@ class OpenAICompatibleVisionExtractor:
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"Document type: {document_type}. Extract the visible text."},
+                            {
+                                "type": "text",
+                                "text": f"Document type: {document_type}. Extract the visible text.",
+                            },
                             {"type": "image_url", "image_url": {"url": image_data_url}},
                         ],
                     },
@@ -258,10 +256,21 @@ class OpenAICompatibleVisionExtractor:
                 confidence=None,
                 provider="openai_compatible_vision",
             )
-        except (APIError, APIConnectionError, APITimeoutError, IndexError, TypeError, ValueError, ValidationError) as exc:
+        except (
+            APIError,
+            APIConnectionError,
+            APITimeoutError,
+            IndexError,
+            TypeError,
+            ValueError,
+            ValidationError,
+        ) as exc:
             raise DomainError(
                 code="vision_extraction_unavailable",
-                message="OpenAI-compatible vision extraction is unavailable or returned invalid output; use manual review.",
+                message=(
+                    "OpenAI-compatible vision extraction is unavailable or returned invalid output; "
+                    "use manual review."
+                ),
                 status_code=503,
             ) from exc
         finally:
@@ -360,11 +369,11 @@ def generate_mock_wav(duration_seconds: float = 0.5, sample_rate: int = 16000) -
         b"WAVE",
         b"fmt ",
         16,  # Subchunk1Size (16 for PCM)
-        1,   # AudioFormat (1 for PCM)
-        1,   # NumChannels (1 for mono)
+        1,  # AudioFormat (1 for PCM)
+        1,  # NumChannels (1 for mono)
         sample_rate,
         sample_rate * 2,  # ByteRate
-        2,   # BlockAlign
+        2,  # BlockAlign
         16,  # BitsPerSample
         b"data",
         data_size,
@@ -379,10 +388,10 @@ async def get_or_synthesize_question_audio(
     prompt_text: str,
     language: str = "en",
 ) -> tuple[bytes, UUID, bool]:
-    """Retrieve pre-synthesized audio prompt from Azure Blob Storage / DB, or synthesize once, upload to blob, and save to DB."""
+    """Retrieve or synthesize a prompt, then cache it in Blob Storage and the database."""
     norm_lang = (language or "en").strip().lower()
     norm_prompt = prompt_text.strip()
-    prompt_hash = hashlib.sha256(f"{norm_lang}:{norm_prompt}".encode("utf-8")).hexdigest()
+    prompt_hash = hashlib.sha256(f"{norm_lang}:{norm_prompt}".encode()).hexdigest()
 
     cached = await session.scalar(
         select(QuestionAudioPrompt).where(QuestionAudioPrompt.prompt_hash == prompt_hash)
@@ -445,4 +454,3 @@ async def get_or_synthesize_question_audio(
         await session.flush()
 
     return audio_bytes, prompt_id, False
-

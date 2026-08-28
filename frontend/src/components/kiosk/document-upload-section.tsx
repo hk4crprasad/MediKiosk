@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, extractDocument, uploadDocument } from "@/lib/api";
+import { ApiError, extractDocument, KioskLanguage, uploadDocument } from "@/lib/api";
 
 type DocumentUploadSectionProps = {
   encounterId: string;
   token: string;
+  language: KioskLanguage;
 };
 
 type UploadedDoc = {
@@ -16,13 +17,14 @@ type UploadedDoc = {
   extracted?: boolean;
 };
 
-export function DocumentUploadSection({ encounterId, token }: DocumentUploadSectionProps) {
+export function DocumentUploadSection({ encounterId, token, language }: DocumentUploadSectionProps) {
   const [file, setFile] = useState<File | null>(null);
   const [docType, setDocType] = useState("prescription");
   const [uploading, setUploading] = useState(false);
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const text = (english: string, hindi: string) => (language === "hi" ? hindi : english);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -39,7 +41,7 @@ export function DocumentUploadSection({ encounterId, token }: DocumentUploadSect
         status: uploaded.processing_status,
       };
       setUploadedDocs((prev) => [...prev, newDoc]);
-      setSuccess(`"${uploaded.original_filename}" uploaded successfully to private storage.`);
+      setSuccess(text(`"${uploaded.original_filename}" uploaded successfully to private storage.`, `"${uploaded.original_filename}" निजी संग्रह में अपलोड हो गई।`));
       setFile(null);
 
       // Trigger automatic extraction
@@ -52,7 +54,7 @@ export function DocumentUploadSection({ encounterId, token }: DocumentUploadSect
         // Extraction non-blocking for upload
       }
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Document upload failed.");
+      setError(caught instanceof ApiError ? caught.message : text("Document upload failed.", "दस्तावेज़ अपलोड नहीं हो सका।"));
     } finally {
       setUploading(false);
     }
@@ -61,31 +63,31 @@ export function DocumentUploadSection({ encounterId, token }: DocumentUploadSect
   return (
     <div style={{ marginTop: "2rem", padding: "1.25rem", borderRadius: "12px", border: "1px solid var(--border, #2a3342)", background: "rgba(255,255,255,0.02)" }}>
       <h2 className="display" style={{ fontSize: "1.25rem", margin: "0 0 0.5rem" }}>
-        📁 Upload prior medical documents (Optional)
+        📁 {text("Upload prior medical documents (optional)", "पुराने चिकित्सा दस्तावेज़ अपलोड करें (वैकल्पिक)")}
       </h2>
       <p className="panel-copy kiosk-copy" style={{ margin: "0 0 1rem" }}>
-        Carry prior prescriptions, lab reports, or discharge summaries? Upload them here so your doctor can review digitized medical records during your consultation. (PDF, JPG, PNG up to 15MB)
+        {text("Carry prior prescriptions, lab reports, or discharge summaries? Upload them for your doctor to review during this consultation. PDF, JPG, or PNG up to 15 MB.", "क्या आपके पास पुरानी पर्ची, लैब रिपोर्ट या डिस्चार्ज सारांश है? इन्हें अपलोड करें ताकि डॉक्टर इस परामर्श में देख सकें। PDF, JPG या PNG, अधिकतम 15 MB।")}
       </p>
 
       <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           <div>
-            <label htmlFor="kioskDocType" style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem", fontWeight: 600 }}>Document kind</label>
+            <label htmlFor="kioskDocType" style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem", fontWeight: 600 }}>{text("Document kind", "दस्तावेज़ का प्रकार")}</label>
             <select
               id="kioskDocType"
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
               style={{ padding: "0.5rem 0.75rem", borderRadius: "8px", background: "rgba(0,0,0,0.3)", color: "inherit", border: "1px solid var(--border, #4b5563)" }}
             >
-              <option value="prescription">Prescription</option>
-              <option value="lab_report">Lab / Diagnostic Report</option>
-              <option value="discharge_summary">Discharge Summary</option>
-              <option value="other">Other Medical Record</option>
+              <option value="prescription">{text("Prescription", "पर्ची")}</option>
+              <option value="lab_report">{text("Lab / Diagnostic Report", "लैब / जाँच रिपोर्ट")}</option>
+              <option value="discharge_summary">{text("Discharge Summary", "डिस्चार्ज सारांश")}</option>
+              <option value="other">{text("Other medical record", "अन्य चिकित्सा रिकॉर्ड")}</option>
             </select>
           </div>
 
           <div style={{ flex: 1, minWidth: "200px" }}>
-            <label htmlFor="kioskDocFile" style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem", fontWeight: 600 }}>Select file</label>
+            <label htmlFor="kioskDocFile" style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem", fontWeight: 600 }}>{text("Select file", "फ़ाइल चुनें")}</label>
             <input
               id="kioskDocFile"
               type="file"
@@ -102,7 +104,7 @@ export function DocumentUploadSection({ encounterId, token }: DocumentUploadSect
               type="submit"
               style={{ marginTop: "1rem" }}
             >
-              {uploading ? "Uploading & OCR…" : "Upload & scan"}
+              {uploading ? text("Uploading & OCR…", "अपलोड और OCR हो रहा है…") : text("Upload & scan", "अपलोड और स्कैन करें")}
             </button>
           </div>
         </div>
@@ -113,7 +115,7 @@ export function DocumentUploadSection({ encounterId, token }: DocumentUploadSect
 
       {uploadedDocs.length > 0 && (
         <div style={{ marginTop: "1rem" }}>
-          <p style={{ fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.5rem" }}>Uploaded documents for this visit ({uploadedDocs.length}):</p>
+          <p style={{ fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.5rem" }}>{text(`Uploaded documents for this visit (${uploadedDocs.length}):`, `इस मुलाकात के लिए अपलोड दस्तावेज़ (${uploadedDocs.length}):`)}</p>
           <div className="data-list">
             {uploadedDocs.map((doc) => (
               <div className="data-card" key={doc.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 1rem" }}>
@@ -121,7 +123,7 @@ export function DocumentUploadSection({ encounterId, token }: DocumentUploadSect
                   <strong>{doc.filename}</strong>
                   <span style={{ fontSize: "0.8rem", opacity: 0.8, marginLeft: "0.5rem" }}>({doc.type})</span>
                 </div>
-                <span className="tag">{doc.extracted ? "✓ OCR processed" : "Uploaded"}</span>
+                <span className="tag">{doc.extracted ? text("✓ OCR processed", "✓ OCR पूरा") : text("Uploaded", "अपलोड हुआ")}</span>
               </div>
             ))}
           </div>

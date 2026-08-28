@@ -1,5 +1,5 @@
-import enum
 from datetime import datetime
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
@@ -12,13 +12,13 @@ from app.core.database import Base
 JsonType = JSON().with_variant(JSONB, "postgresql")
 
 
-class UserRole(str, enum.Enum):
+class UserRole(StrEnum):
     admin = "admin"
     triage = "triage"
     physician = "physician"
 
 
-class EncounterStatus(str, enum.Enum):
+class EncounterStatus(StrEnum):
     draft = "DRAFT"
     in_progress = "IN_PROGRESS"
     urgent_review = "URGENT_REVIEW"
@@ -28,34 +28,36 @@ class EncounterStatus(str, enum.Enum):
     cancelled = "CANCELLED"
 
 
-class VerificationStatus(str, enum.Enum):
+class VerificationStatus(StrEnum):
     unverified = "unverified"
     patient_confirmed = "patient_confirmed"
     clinician_verified = "clinician_verified"
     rejected = "rejected"
 
 
-class RedFlagSeverity(str, enum.Enum):
+class RedFlagSeverity(StrEnum):
     urgent = "urgent"
     high = "high"
     moderate = "moderate"
 
 
-class DocumentStatus(str, enum.Enum):
+class DocumentStatus(StrEnum):
     uploaded = "UPLOADED"
     processing = "PROCESSING"
     processed = "PROCESSED"
     failed = "FAILED"
 
 
-class SummaryStatus(str, enum.Enum):
+class SummaryStatus(StrEnum):
     draft = "DRAFT"
     accepted = "ACCEPTED"
     rejected = "REJECTED"
 
 
 class TimestampedModel:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
@@ -76,7 +78,9 @@ class RevokedToken(Base):
     token_id: Mapped[UUID] = mapped_column(Uuid, unique=True, index=True, nullable=False)
     actor_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    revoked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class Patient(TimestampedModel, Base):
@@ -93,7 +97,9 @@ class Encounter(TimestampedModel, Base):
     __tablename__ = "encounters"
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     patient_id: Mapped[UUID] = mapped_column(ForeignKey("patients.id"), nullable=False, index=True)
-    status: Mapped[EncounterStatus] = mapped_column(Enum(EncounterStatus), default=EncounterStatus.draft, index=True)
+    status: Mapped[EncounterStatus] = mapped_column(
+        Enum(EncounterStatus), default=EncounterStatus.draft, index=True
+    )
     mode: Mapped[str] = mapped_column(String(32), default="kiosk", nullable=False)
     pathway_version: Mapped[str] = mapped_column(String(64), default="chest-discomfort-v1", nullable=False)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
@@ -179,7 +185,9 @@ class AssistiveArtifact(Base):
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
     structured_data: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
     confidence: Mapped[float | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class QuestionAudioPrompt(TimestampedModel, Base):
@@ -204,7 +212,9 @@ class Summary(TimestampedModel, Base):
     source: Mapped[str] = mapped_column(String(32), default="template", nullable=False)
     prompt_version: Mapped[str | None] = mapped_column(String(64))
     prompt_metadata: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
-    status: Mapped[SummaryStatus] = mapped_column(Enum(SummaryStatus), default=SummaryStatus.draft, nullable=False)
+    status: Mapped[SummaryStatus] = mapped_column(
+        Enum(SummaryStatus), default=SummaryStatus.draft, nullable=False
+    )
 
 
 class PhysicianRevision(Base):
@@ -216,7 +226,9 @@ class PhysicianRevision(Base):
     old_value: Mapped[str] = mapped_column(Text, nullable=False)
     new_value: Mapped[str] = mapped_column(Text, nullable=False)
     doctor_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class AuditEvent(Base):
@@ -227,7 +239,9 @@ class AuditEvent(Base):
     event_type: Mapped[str] = mapped_column(String(128), index=True)
     request_id: Mapped[str | None] = mapped_column(String(64))
     metadata_json: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class FhirExport(Base):
@@ -236,4 +250,6 @@ class FhirExport(Base):
     encounter_id: Mapped[UUID] = mapped_column(ForeignKey("encounters.id"), index=True)
     bundle: Mapped[dict] = mapped_column(JsonType, nullable=False)
     validation_status: Mapped[str] = mapped_column(String(64), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

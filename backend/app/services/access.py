@@ -15,7 +15,9 @@ async def get_encounter_or_404(session: AsyncSession, encounter_id: UUID) -> Enc
     return encounter
 
 
-def ensure_encounter_access(principal: Principal, encounter_id: UUID, *, staff_roles: tuple[str, ...] = ()) -> None:
+def ensure_encounter_access(
+    principal: Principal, encounter_id: UUID, *, staff_roles: tuple[str, ...] = ()
+) -> None:
     if principal.token_type == "kiosk" and principal.encounter_id == encounter_id:
         return
     if principal.token_type == "staff" and (not staff_roles or principal.role in staff_roles):

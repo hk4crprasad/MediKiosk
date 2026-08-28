@@ -4,7 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_session
-from app.core.security import Principal, create_token, get_principal, hash_password, require_staff, verify_password
+from app.core.security import (
+    Principal,
+    create_token,
+    get_principal,
+    hash_password,
+    require_staff,
+    verify_password,
+)
 from app.models import RevokedToken, User
 from app.schemas.auth import (
     CurrentUserResponse,
@@ -20,7 +27,9 @@ admin_router = APIRouter(prefix="/admin", tags=["administration"])
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest, request: Request, session: AsyncSession = Depends(get_session)) -> TokenResponse:
+async def login(
+    payload: LoginRequest, request: Request, session: AsyncSession = Depends(get_session)
+) -> TokenResponse:
     user = await session.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None or not user.active or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
@@ -73,7 +82,9 @@ async def create_staff_user(
 ) -> StaffUserResponse:
     existing = await session.scalar(select(User).where(User.email == payload.email.lower()))
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A staff user with this email already exists")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="A staff user with this email already exists"
+        )
     user = User(email=payload.email.lower(), password_hash=hash_password(payload.password), role=payload.role)
     session.add(user)
     await session.flush()

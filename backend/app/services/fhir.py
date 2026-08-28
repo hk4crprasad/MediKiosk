@@ -24,9 +24,15 @@ async def create_local_export(session: AsyncSession, encounter: Encounter) -> Fh
                     {
                         "system": "https://healthid.abdm.gov.in",
                         "value": patient.abha_identifier,
-                        "type": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/v2-0203", "code": "MR"}]},
+                        "type": {
+                            "coding": [
+                                {"system": "http://terminology.hl7.org/CodeSystem/v2-0203", "code": "MR"}
+                            ]
+                        },
                     }
-                ] if patient.abha_identifier else [],
+                ]
+                if patient.abha_identifier
+                else [],
                 "name": [{"text": patient.display_name or "Synthetic patient"}],
                 "gender": patient.sex,
             }
@@ -35,7 +41,9 @@ async def create_local_export(session: AsyncSession, encounter: Encounter) -> Fh
             "resource": {
                 "resourceType": "Encounter",
                 "id": str(encounter.id),
-                "status": "finished" if encounter.status.value in {"SUBMITTED", "VERIFIED"} else "in-progress",
+                "status": "finished"
+                if encounter.status.value in {"SUBMITTED", "VERIFIED"}
+                else "in-progress",
                 "subject": {"reference": f"Patient/{patient.id}"},
             }
         },
@@ -45,7 +53,9 @@ async def create_local_export(session: AsyncSession, encounter: Encounter) -> Fh
             {
                 "resource": {
                     "resourceType": "Observation",
-                    "status": "final" if fact.verification_status.value == "clinician_verified" else "preliminary",
+                    "status": "final"
+                    if fact.verification_status.value == "clinician_verified"
+                    else "preliminary",
                     "subject": {"reference": f"Patient/{patient.id}"},
                     "encounter": {"reference": f"Encounter/{encounter.id}"},
                     "code": {"text": fact.fact_type},
@@ -54,6 +64,8 @@ async def create_local_export(session: AsyncSession, encounter: Encounter) -> Fh
             }
         )
     bundle = {"resourceType": "Bundle", "type": "collection", "entry": entries}
-    export = FhirExport(encounter_id=encounter.id, bundle=bundle, validation_status="local_structural_validation_passed")
+    export = FhirExport(
+        encounter_id=encounter.id, bundle=bundle, validation_status="local_structural_validation_passed"
+    )
     session.add(export)
     return export

@@ -2,37 +2,39 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ApiError, createEncounter, Pathway } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { ApiError, createEncounter, KioskLanguage, Pathway } from "@/lib/api";
 
-const pathways: Array<{ value: Pathway; label: string; labelHi: string; note: string }> = [
-  { value: "chest-discomfort-v1", label: "Chest discomfort", labelHi: "सीने में तकलीफ / दर्द", note: "Pain, pressure, tightness, or discomfort in the chest." },
-  { value: "fever-v1", label: "Fever", labelHi: "बुखार", note: "Feeling feverish or a measured high temperature." },
-  { value: "headache-v1", label: "Headache", labelHi: "सिरदर्द", note: "Pain, pressure, or discomfort in the head." },
-  { value: "abdominal-pain-v1", label: "Abdominal pain", labelHi: "पेट में दर्द / परेशानी", note: "Pain or discomfort in the stomach or belly." },
-  { value: "ayush-dashavidha-v1", label: "AYUSH consultation", labelHi: "आयुष परामर्श (दशविध परीक्षा)", note: "Dashavidha Pariksha, Prakriti, and lifestyle context for an AYUSH consultation." },
+const pathways: Array<{ value: Pathway; label: string; labelHi: string; note: string; noteHi: string }> = [
+  { value: "chest-discomfort-v1", label: "Chest discomfort", labelHi: "सीने में तकलीफ़", note: "A guided history for chest pain, pressure, tightness, or discomfort.", noteHi: "सीने के दर्द, दबाव, जकड़न या तकलीफ़ के लिए निर्देशित जानकारी।" },
+  { value: "fever-v1", label: "Fever", labelHi: "बुखार", note: "Feeling feverish or a measured high temperature.", noteHi: "बुखार जैसा महसूस होना या तापमान बढ़ना।" },
+  { value: "headache-v1", label: "Headache", labelHi: "सिरदर्द", note: "Pain, pressure, or discomfort in the head.", noteHi: "सिर में दर्द, दबाव या तकलीफ़।" },
+  { value: "abdominal-pain-v1", label: "Abdominal pain", labelHi: "पेट में दर्द", note: "Pain or discomfort in the stomach or belly.", noteHi: "पेट या उदर में दर्द या तकलीफ़।" },
+  { value: "ayush-dashavidha-v1", label: "AYUSH consultation", labelHi: "आयुष परामर्श", note: "Dashavidha and lifestyle context for an AYUSH consultation.", noteHi: "आयुष परामर्श के लिए दशविध परीक्षा और जीवनशैली की जानकारी।" },
 ];
 
-const languages = [
+const languages: Array<{ code: KioskLanguage; label: string }> = [
   { code: "en", label: "English" },
-  { code: "hi", label: "हिंदी (Hindi)" },
-  { code: "ta", label: "தமிழ் (Tamil)" },
-  { code: "te", label: "తెలుగు (Telugu)" },
-  { code: "kn", label: "ಕನ್ನಡ (Kannada)" },
-  { code: "bn", label: "বাংলা (Bengali)" },
+  { code: "hi", label: "हिंदी" },
 ];
 
 export function StartEncounterForm() {
   const router = useRouter();
   const [pathway, setPathway] = useState<Pathway>("chest-discomfort-v1");
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState<KioskLanguage>("en");
   const [displayName, setDisplayName] = useState("");
-  const [birthYear, setBirthYear] = useState<string>("");
-  const [sex, setSex] = useState<string>("");
+  const [birthYear, setBirthYear] = useState("");
+  const [sex, setSex] = useState("");
   const [abhaId, setAbhaId] = useState("");
   const [showAbhaScan, setShowAbhaScan] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hindi = language === "hi";
+  const text = (english: string, hindiText: string) => (hindi ? hindiText : english);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   function autofillDemoAbha() {
     setDisplayName("Ramesh Sharma");
@@ -44,13 +46,14 @@ export function StartEncounterForm() {
   }
 
   async function start() {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
     try {
       const result = await createEncounter({
         language,
         pathway,
         displayName: displayName.trim() || undefined,
-        birthYear: birthYear ? parseInt(birthYear, 10) : undefined,
+        birthYear: birthYear ? Number.parseInt(birthYear, 10) : undefined,
         sex: sex || undefined,
         abhaIdentifier: abhaId.trim() || undefined,
       });
@@ -58,9 +61,13 @@ export function StartEncounterForm() {
       sessionStorage.setItem("medikiosk.language", language);
       router.push(`/kiosk/${result.encounter.id}/consent`);
     } catch (caught) {
-      const issue = caught instanceof ApiError ? `${caught.message}${caught.requestId ? ` (Request ID: ${caught.requestId})` : ""}` : "Unable to begin this encounter. Please ask a staff member for help.";
+      const issue = caught instanceof ApiError
+        ? `${caught.message}${caught.requestId ? ` (Request ID: ${caught.requestId})` : ""}`
+        : text("Unable to begin this encounter. Please ask a staff member for help.", "यह सत्र शुरू नहीं हो सका। कृपया कर्मचारी से सहायता लें।");
       setError(issue);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -68,143 +75,73 @@ export function StartEncounterForm() {
       <div className="shell">
         <header className="site-header">
           <Link className="brand" href="/"><span className="brand-mark"><span>✦</span></span>MediKiosk</Link>
-          <span className="nav-link">Touch & Voice Intake</span>
+          <span className="nav-link">{text("Private touch intake", "निजी टच इंटेक")}</span>
         </header>
       </div>
 
       <section className="form-shell kiosk-shell">
         <div className="panel kiosk-panel">
-          <p className="eyebrow">Step 1 of 3 · touch check-in</p>
+          <p className="eyebrow">{text("Step 1 of 3 · private check-in", "चरण 1 / 3 · निजी पंजीकरण")}</p>
           <div className="step-line"><span className="active" /><span /><span /></div>
 
-          {/* Language selector */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: "0.4rem" }}>
-              🌐 Select Language / भाषा चुनें
-            </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {languages.map((lang) => (
-                <button
-                  key={lang.code}
-                  type="button"
-                  onClick={() => setLanguage(lang.code)}
-                  className={`choice ${language === lang.code ? "selected" : ""}`}
-                  style={{ padding: "0.4rem 0.8rem", borderRadius: "8px", fontSize: "0.85rem" }}
-                >
-                  {lang.label}
-                </button>
+          <div className="language-switch" aria-label={text("Choose language", "भाषा चुनें")}>
+            <p>{text("Choose your language", "अपनी भाषा चुनें")}</p>
+            <div>
+              {languages.map((item) => (
+                <button aria-pressed={language === item.code} className={`choice ${language === item.code ? "selected" : ""}`} key={item.code} onClick={() => setLanguage(item.code)} type="button">{item.label}</button>
               ))}
             </div>
           </div>
 
-          {/* ABHA ID / QR Identification Card */}
-          <div style={{ marginBottom: "1.5rem", padding: "1rem", borderRadius: "10px", border: "1px solid #3b82f6", background: "rgba(59, 130, 246, 0.04)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-              <div>
-                <strong style={{ color: "#60a5fa" }}>🆔 Ayushman Bharat Health Account (ABHA / QR)</strong>
-                <p style={{ margin: "0.2rem 0 0", fontSize: "0.85rem", opacity: 0.85 }}>
-                  {abhaId ? `Linked ABHA: ${abhaId}` : "Scan ABHA card or enter ABHA ID for instant profile lookup"}
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  type="button"
-                  className="button-secondary"
-                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.6rem" }}
-                  onClick={() => setShowAbhaScan(!showAbhaScan)}
-                >
-                  {showAbhaScan ? "Hide entry" : "Enter ABHA"}
-                </button>
-                <button
-                  type="button"
-                  className="button-primary"
-                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.6rem", background: "#3b82f6", borderColor: "#2563eb" }}
-                  onClick={autofillDemoAbha}
-                >
-                  ⚡ Demo ABHA Fill
-                </button>
-              </div>
-            </div>
+          <div className="kiosk-privacy-strip">
+            <strong>{text("English + Hindi patient flow", "अंग्रेज़ी + हिंदी मरीज प्रवाह")}</strong>
+            <span>{text("Large touch choices, spoken guidance, and a private auto-reset.", "बड़े टच विकल्प, बोलकर मार्गदर्शन और निजी ऑटो-रीसेट।")}</span>
+          </div>
 
+          <div className="abha-card">
+            <div>
+              <strong>🆔 {text("ABHA / QR (optional)", "ABHA / QR (वैकल्पिक)")}</strong>
+              <p>{abhaId ? text(`Linked ABHA: ${abhaId}`, `लिंक किया गया ABHA: ${abhaId}`) : text("Enter an ABHA ID if available, or continue without it.", "यदि ABHA ID उपलब्ध हो तो दर्ज करें, या इसके बिना आगे बढ़ें।")}</p>
+            </div>
+            <div className="abha-actions">
+              <button className="button-secondary" onClick={() => setShowAbhaScan((visible) => !visible)} type="button">{showAbhaScan ? text("Hide entry", "छिपाएँ") : text("Enter ABHA", "ABHA दर्ज करें")}</button>
+              <button className="button-primary" onClick={autofillDemoAbha} type="button">⚡ {text("Demo fill", "डेमो भरें")}</button>
+            </div>
             {showAbhaScan && (
-              <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
-                <input
-                  type="text"
-                  placeholder="e.g. 91-1234-5678-9012@abdm"
-                  value={abhaId}
-                  onChange={(e) => setAbhaId(e.target.value)}
-                  style={{ flex: 1, padding: "0.5rem", borderRadius: "6px", background: "rgba(0,0,0,0.3)", color: "inherit", border: "1px solid #4b5563" }}
-                />
-              </div>
+              <label className="kiosk-inline-field" htmlFor="abhaId">
+                <span>{text("ABHA ID", "ABHA ID")}</span>
+                <input id="abhaId" onChange={(event) => setAbhaId(event.target.value)} placeholder="91-1234-5678-9012@abdm" type="text" value={abhaId} />
+              </label>
             )}
           </div>
 
-          {/* Optional demographics */}
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
-            <div style={{ flex: 2, minWidth: "180px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: "0.3rem" }}>Patient Name (Optional)</label>
-              <input
-                type="text"
-                placeholder="e.g. Ramesh Sharma"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", background: "rgba(0,0,0,0.2)", color: "inherit", border: "1px solid var(--border, #4b5563)" }}
-              />
+          <details className="kiosk-optional-details">
+            <summary>{text("Optional patient details", "वैकल्पिक मरीज जानकारी")}</summary>
+            <p>{text("These are optional. You can complete the kiosk using only the touch choices below.", "ये जानकारी वैकल्पिक है। आप नीचे दिए टच विकल्पों से ही इंटेक पूरा कर सकते हैं।")}</p>
+            <div className="field-grid">
+              <label className="field"><span>{text("Patient name", "मरीज का नाम")}</span><input onChange={(event) => setDisplayName(event.target.value)} placeholder={text("e.g. Ramesh Sharma", "जैसे, रमेश शर्मा")} type="text" value={displayName} /></label>
+              <label className="field"><span>{text("Birth year", "जन्म वर्ष")}</span><input onChange={(event) => setBirthYear(event.target.value)} placeholder="YYYY" type="number" value={birthYear} /></label>
+              <label className="field"><span>{text("Sex", "लिंग")}</span><select onChange={(event) => setSex(event.target.value)} value={sex}><option value="">{text("Select", "चुनें")}</option><option value="male">{text("Male", "पुरुष")}</option><option value="female">{text("Female", "महिला")}</option><option value="other">{text("Other", "अन्य")}</option></select></label>
             </div>
-            <div style={{ flex: 1, minWidth: "110px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: "0.3rem" }}>Birth Year</label>
-              <input
-                type="number"
-                placeholder="YYYY"
-                value={birthYear}
-                onChange={(e) => setBirthYear(e.target.value)}
-                style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", background: "rgba(0,0,0,0.2)", color: "inherit", border: "1px solid var(--border, #4b5563)" }}
-              />
-            </div>
-            <div style={{ flex: 1, minWidth: "120px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: "0.3rem" }}>Sex</label>
-              <select
-                value={sex}
-                onChange={(e) => setSex(e.target.value)}
-                style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", background: "rgba(0,0,0,0.2)", color: "inherit", border: "1px solid var(--border, #4b5563)" }}
-              >
-                <option value="">Select</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
+          </details>
 
-          <h1 className="display" style={{ marginTop: "1rem" }}>
-            {language === "hi" ? "आज अस्पताल आने का मुख्य कारण?" : "What brings you here today?"}
-          </h1>
-          <p className="panel-copy kiosk-copy">
-            {language === "hi" ? "नीचे दिए गए विकल्पों में से एक चुनें। कोई भी कठिनाई होने पर कर्मचारी सहायता कर सकते हैं।" : "Tap one answer. You do not need to type anything. A staff member can help at any time."}
-          </p>
+          <h1 className="display">{text("What brings you here today?", "आज आप किस तकलीफ़ के लिए आए हैं?")}</h1>
+          <p className="panel-copy kiosk-copy">{text("Tap one reason to begin. The chest-discomfort flow records a structured history for the clinical team; it does not diagnose you.", "शुरू करने के लिए एक विकल्प चुनें। सीने की तकलीफ़ वाला प्रवाह क्लिनिकल टीम के लिए व्यवस्थित जानकारी दर्ज करता है; यह निदान नहीं करता।")}</p>
 
-          <div aria-label="Choose the reason for today’s visit" className="kiosk-choice-grid">
+          <div aria-label={text("Choose the reason for today’s visit", "आज आने का कारण चुनें")} className="kiosk-choice-grid">
             {pathways.map((item) => (
-              <button
-                aria-pressed={pathway === item.value}
-                className={`choice kiosk-choice ${pathway === item.value ? "selected" : ""}`}
-                key={item.value}
-                onClick={() => setPathway(item.value)}
-                type="button"
-              >
-                <strong>{language === "hi" ? item.labelHi : item.label}</strong>
-                <small>{item.note}</small>
+              <button aria-pressed={pathway === item.value} className={`choice kiosk-choice ${pathway === item.value ? "selected" : ""}`} key={item.value} onClick={() => setPathway(item.value)} type="button">
+                <strong>{hindi ? item.labelHi : item.label}</strong>
+                <small>{hindi ? item.noteHi : item.note}</small>
               </button>
             ))}
           </div>
 
           {error && <p className="notice error" role="alert">{error}</p>}
 
-          <div className="button-row kiosk-action-row" style={{ marginTop: "2rem" }}>
-            <button className="button-primary kiosk-primary" disabled={loading} onClick={start} type="button">
-              {loading ? "Starting private session…" : "Continue to consent →"}
-            </button>
-            <Link className="button-secondary kiosk-secondary" href="/">Return to welcome</Link>
+          <div className="button-row kiosk-action-row">
+            <button className="button-primary kiosk-primary" disabled={loading} onClick={start} type="button">{loading ? text("Starting private session…", "निजी सत्र शुरू हो रहा है…") : text("Continue to consent →", "सहमति के लिए आगे बढ़ें →")}</button>
+            <Link className="button-secondary kiosk-secondary" href="/">{text("Return to welcome", "स्वागत पृष्ठ पर जाएँ")}</Link>
           </div>
         </div>
       </section>

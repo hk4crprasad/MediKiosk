@@ -75,7 +75,9 @@ async def update_summary(
     )
     session.add(revision)
     summary.text = payload.text
-    await write_audit(session, "summary.edited", actor_id=principal.subject, encounter_id=encounter_id, request=request)
+    await write_audit(
+        session, "summary.edited", actor_id=principal.subject, encounter_id=encounter_id, request=request
+    )
     await session.commit()
     await session.refresh(summary)
     return SummaryResponse.model_validate(summary)

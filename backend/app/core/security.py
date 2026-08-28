@@ -33,7 +33,9 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode(), password_hash.encode())
 
 
-def create_token(subject: UUID, role: str, token_type: str, expires_minutes: int, encounter_id: UUID | None = None) -> str:
+def create_token(
+    subject: UUID, role: str, token_type: str, expires_minutes: int, encounter_id: UUID | None = None
+) -> str:
     settings = get_settings()
     expires_at = datetime.now(UTC) + timedelta(minutes=expires_minutes)
     payload = {
@@ -56,7 +58,9 @@ async def get_principal(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication is required")
     settings = get_settings()
     try:
-        payload = jwt.decode(credentials.credentials, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            credentials.credentials, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+        )
         principal = Principal(
             subject=UUID(payload["sub"]),
             role=payload.get("role"),
@@ -68,13 +72,19 @@ async def get_principal(
         if principal.token_type == "staff":
             from app.models import RevokedToken, User
 
-            is_revoked = await session.scalar(select(RevokedToken.id).where(RevokedToken.token_id == principal.token_id))
+            is_revoked = await session.scalar(
+                select(RevokedToken.id).where(RevokedToken.token_id == principal.token_id)
+            )
             user = await session.get(User, principal.subject)
             if is_revoked or user is None or not user.active:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is no longer active")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is no longer active"
+                )
         return principal
     except (InvalidTokenError, ValueError, KeyError) as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        ) from exc
 
 
 def require_staff(*roles: str):

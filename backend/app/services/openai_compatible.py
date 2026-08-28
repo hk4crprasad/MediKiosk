@@ -40,7 +40,8 @@ class OpenAICompatibleSummaryGenerator:
                     {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
-                        "content": "Structured clinical facts:\n" + json.dumps(structured_facts, ensure_ascii=False),
+                        "content": "Structured clinical facts:\n"
+                        + json.dumps(structured_facts, ensure_ascii=False),
                     },
                 ],
             )
@@ -49,7 +50,9 @@ class OpenAICompatibleSummaryGenerator:
                 raise ValueError("Provider response content is not text")
             return GeneratedSummary.model_validate_json(content)
         except (APIError, APITimeoutError, IndexError, TypeError, ValueError, ValidationError) as exc:
-            logger.warning("OpenAI-compatible summary generation failed; template fallback will be used: %s", exc)
+            logger.warning(
+                "OpenAI-compatible summary generation failed; template fallback will be used: %s", exc
+            )
             raise RuntimeError("OpenAI-compatible provider output was unavailable or invalid") from exc
         finally:
             await client.close()

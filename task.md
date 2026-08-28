@@ -51,6 +51,9 @@
 | [X] | KSK-02 | Reject unconfigured/free-text response values | Backend | Implemented; pending user verification | A response accepts only a configured string value for the current question; `raw_text` remains a non-authoritative excerpt. |
 | [X] | KSK-03 | Deliver tablet-scale choice screens without required keyboard fields | Frontend | Implemented; pending browser/user verification | Start, consent, and intake fit a tablet with large touch targets; intake can complete using only touch choices. |
 | [X] | KSK-04 | Integrate protected next-question audio playback | Frontend | Implemented; pending user verification | Browser requests only the current server-configured prompt, verifies its question-key header, and keeps visible touch/text fallback. |
+| [X] | KSK-05 | Deliver one complete English/Hindi patient flow | Full stack | Implemented; pending user/device verification | New encounters accept only `en` or `hi`; API emits Hindi prompt/choice labels while persisting stable controlled values. |
+| [X] | KSK-06 | Reset the private kiosk session on submission or inactivity | Frontend | Implemented; browser demo-tested | The local kiosk token/language are cleared after successful submission or two minutes without activity; a 15-second warning preserves patient control. |
+| [X] | KSK-07 | Correct consent-revocation communication | Frontend/API | Implemented; pending user verification | The patient is told that revocation ends device access and does not claim deletion of already recorded clinical/audit evidence. |
 
 ## KSK user test checklist — Postman/browser
 
@@ -58,6 +61,9 @@
 - [ ] KSK-02: submit an unconfigured value for the current question and verify `422`; submit an allowed value and verify the saved fact uses that exact controlled value.
 - [ ] KSK-03: on a tablet, complete a synthetic encounter without opening a keyboard; verify choice buttons are readable/tappable and the optional **Your input** excerpt cannot submit an answer by itself.
 - [ ] KSK-04: with `SPEECH_ADAPTER_MODE=openai_compatible`, use **Play question aloud** and verify the emitted audio's `X-MediKiosk-Question-Key` matches the displayed question. With TTS disabled, verify the text and touch choices remain usable.
+- [ ] KSK-05: create one English and one Hindi synthetic chest encounter. Confirm the consent, questions, choices, audio, review, and document-upload surfaces remain in the selected language while submitted values stay controlled API values.
+- [ ] KSK-06: leave a kiosk session untouched for two minutes and confirm the warning then reset; submit a completed intake and confirm the kiosk returns to `/kiosk/start` with no token in session storage.
+- [ ] KSK-07: revoke consent and confirm the explanation says device access ends without claiming deletion of already recorded clinical/audit evidence.
 
 ## Active task — B3 Safety, Triage, and Clinician Review
 
@@ -242,6 +248,8 @@
 | 2026-08-27 | Staff Admin & Audio-Guided Consent | Implemented | Codex | Added `/staff/admin/users` UI to provision physician/triage accounts, server-side JWT revocation on logout (`POST /auth/logout`), and bilingual audio playback of DPDP consent on `/kiosk/[encounterId]/consent`. |
 | 2026-08-27 | Document Download & OCR Fact Promotion | Implemented | Codex | Added direct document blob streaming/download in clinician view (`GET /documents/:id/content`), fact promotion button from OCR extraction timeline to verified clinical facts (`POST /documents/:id/extractions/:eid/reviews`), and staff user identity badge in header (`GET /auth/me`). |
 | 2026-08-27 | 100% API Wiring Complete (34/34 Endpoints) | Implemented | Codex | Wired all remaining backend endpoints: DPDP Consent Revocation (`POST /encounters/:id/consents/:cid/revocations` & `GET /encounters/:id/consents`), Document Metadata Inspection (`GET /documents/:id`), Standalone Doc Refresh (`GET /encounters/:id/documents`), Latest OCR Query (`GET /documents/:id/extractions/latest`), FHIR Export by ID Lookup (`GET /encounters/:id/fhir/exports/:eid`), Encounter Status Verification (`GET /encounters/:id`), and Live Health Check (`GET /health`). |
+| 2026-08-28 | Browser Voice Recording Format Repair | Implemented; manual API acceptance pending | Codex/User | Removed false WAV relabelling. The kiosk now negotiates WebM/Opus, Ogg/Opus, or M4A/AAC, uploads the real MIME type and extension, and shows the active format. FastAPI normalises codec parameters and validates WebM, Ogg, MP4/M4A, WAV, and MP3 signatures before STT. Automated format tests pass locally; user-run browser/Postman acceptance remains required. |
+| 2026-08-28 | Flagship Bilingual Kiosk & Chest HPI | Implemented; browser demo-tested; user/device acceptance pending | Codex/User | Reduced new kiosk sessions to English/Hindi, localised API question and controlled-choice labels, added a structured chest HPI (onset, character, radiation, severity, timing, associated symptoms), corrected revocation wording, and added local privacy reset after submission/inactivity. `frontend/tests/kiosk_demo_e2e.py` passes with mocked API responses; it never claims live-provider acceptance. |
 
 ## Update protocol
 

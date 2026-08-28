@@ -3,6 +3,7 @@ from uuid import UUID
 
 from app.schemas.common import APIModel as BaseModel
 
+
 class FhirExportResponse(BaseModel):
     id: UUID
     encounter_id: UUID

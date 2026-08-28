@@ -224,14 +224,14 @@ getHealth                  → GET  /health
 
 | Requirement | Status | Implementation Detail |
 |-------------|--------|----------------------|
-| Adaptive clinical history interview | ✅ **Done** | 5 pathways (Chest, Fever, Headache, Abdominal Pain, AYUSH). Conditional branching via `when` clauses in `pathways.py` |
+| Adaptive clinical history interview | ✅ **Done** | 5 pathways. The flagship chest pathway captures structured HPI onset, character, radiation, severity, timing, and associated symptoms before the existing safety rule. |
 | Touch-based multiple-choice for every question | ✅ **Done** | `single_choice` input type; full kiosk UI in `/kiosk/:id/intake` |
 | TTS audio prompt for each question | ✅ **Done** | Azure OpenAI TTS (`gpt-4o-mini-tts`); cached in Azure Blob + `question_audio_prompts` DB table; served from cache on repeat |
-| Voice / ASR input (speak answers) | ✅ **Done** | `VoiceRecordButton` with Web `MediaRecorder` + Azure OpenAI STT (`gpt-4o-mini-transcribe`) with automatic choice matching |
+| Voice / ASR input (speak answers) | ✅ **Done** | `VoiceRecordButton` negotiates a browser-supported WebM/Opus, Ogg/Opus, or M4A/AAC container, preserves its real MIME type/extension, and sends signature-validated audio to Azure OpenAI STT (`gpt-4o-mini-transcribe`) for automatic choice matching |
 | AYUSH Dashavidha Pariksha mode | ✅ **Done** | 15-question `ayush-dashavidha-v1` pathway covering all 10 Dashavidha parameters + Ahara-Vihara + Agni + Koshtha + Nidana |
 | Red-flag detection + priority alert | ✅ **Done** | Rule engine in `services/intake.py`; `RedFlag` entities; triage queue + acknowledgement workflow |
-| Multilingual support | ✅ **Done** | 6-language touch selector (English, Hindi, Tamil, Telugu, Kannada, Bengali) + dual-language UI titles & TTS |
-| Accessibility / audio guidance | ✅ **Done** | TTS on every question + audio-guided DPDP consent; `aria-*` labels in UI; large-tap touch design |
+| Bilingual support | ✅ **Done** | One complete English/Hindi patient flow: check-in, consent, API-delivered question/choice labels, audio guidance, review, document upload, and session hand-off. |
+| Accessibility / audio guidance | ✅ **Done** | TTS on every question + audio-guided DPDP consent; large-tap touch design; automatic local kiosk reset after submission or inactivity. |
 
 ### Module B — Medical Document Digitization & Intelligence
 
@@ -480,7 +480,7 @@ FRONTEND_IMPLEMENTATION_PLAN.md  Build plan for patient, physician, and triage U
 ### 5–7 Minute Live Demo Sequence
 1. **Patient Check-in (`/kiosk/start`)**: Select Hindi, click `⚡ Demo ABHA Fill` (`91-8472-1928-3011@abdm`), choose Chest Discomfort or AYUSH Dashavidha.
 2. **Audio DPDP Consent (`/kiosk/.../consent`)**: Listen to audio read-aloud and accept.
-3. **Multimodal Intake (`/kiosk/.../intake`)**: Tap choices or press `🎙️ Record Voice` to speak answers; listen to cached TTS audio.
+3. **Multimodal Intake (`/kiosk/.../intake`)**: Tap choices or press `🎙️ Speak answer`; the browser records in a natively supported audio container and displays the active format while recording. Listen to cached TTS audio.
 4. **Document AI Upload**: Upload synthetic prescription PDF/JPEG to Azure Blob.
 5. **Triage Review (`/staff/triage`)**: Show real-time Priority Red Flag alert; nurse acknowledges alert.
 6. **Physician Workspace (`/staff/encounters/[id]`)**:

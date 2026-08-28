@@ -15,6 +15,7 @@ class QuestionResponse(BaseModel):
     input_type: Literal["single_choice"]
     required: bool
     choices: list[str] = []
+    choice_labels: dict[str, str] = Field(default_factory=dict)
     pathway_version: str
 
 
@@ -36,6 +37,8 @@ class FactResponse(BaseModel):
     confidence: float | None
     verification_status: VerificationStatus
     created_at: datetime
+    display_label: str | None = None
+    display_value: str | None = None
 
 
 class IntakeResponseResult(BaseModel):

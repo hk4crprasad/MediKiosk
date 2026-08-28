@@ -25,7 +25,9 @@ settings = get_settings()
 
 async def ensure_bootstrap_admin() -> None:
     async with SessionLocal() as session:
-        existing = await session.scalar(select(User).where(User.email == settings.bootstrap_admin_email.lower()))
+        existing = await session.scalar(
+            select(User).where(User.email == settings.bootstrap_admin_email.lower())
+        )
         if existing is None:
             session.add(
                 User(
@@ -35,7 +37,9 @@ async def ensure_bootstrap_admin() -> None:
                 )
             )
             await session.commit()
-            logger.warning("Created bootstrap administrator; rotate BOOTSTRAP_ADMIN_PASSWORD before shared use.")
+            logger.warning(
+                "Created bootstrap administrator; rotate BOOTSTRAP_ADMIN_PASSWORD before shared use."
+            )
 
 
 async def apply_development_schema_repairs() -> None:
@@ -51,7 +55,10 @@ async def apply_development_schema_repairs() -> None:
             text("ALTER TABLE IF EXISTS fhir_exports ALTER COLUMN validation_status TYPE VARCHAR(64)")
         )
         await connection.execute(
-            text("ALTER TABLE IF EXISTS summaries ADD COLUMN IF NOT EXISTS prompt_metadata JSONB NOT NULL DEFAULT '{}'::jsonb")
+            text(
+                "ALTER TABLE IF EXISTS summaries ADD COLUMN IF NOT EXISTS "
+                "prompt_metadata JSONB NOT NULL DEFAULT '{}'::jsonb"
+            )
         )
 
 
@@ -110,7 +117,11 @@ async def handle_validation_error(request: Request, exc: RequestValidationError)
     return JSONResponse(
         status_code=422,
         content={
-            "error": {"code": "validation_error", "message": "Request validation failed", "details": exc.errors()},
+            "error": {
+                "code": "validation_error",
+                "message": "Request validation failed",
+                "details": exc.errors(),
+            },
             "request_id": getattr(request.state, "request_id", None),
         },
     )
@@ -124,7 +135,11 @@ async def handle_http_error(request: Request, exc: StarletteHTTPException) -> JS
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "error": {"code": f"http_{exc.status_code}", "message": message, "details": jsonable_encoder(details)},
+            "error": {
+                "code": f"http_{exc.status_code}",
+                "message": message,
+                "details": jsonable_encoder(details),
+            },
             "request_id": getattr(request.state, "request_id", None),
         },
     )

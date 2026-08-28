@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.clinical_config.pathways import localise_question
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.errors import DomainError
@@ -25,20 +26,17 @@ from app.services.assistive import (
     mock_document_extraction,
     mock_transcription,
 )
+from app.services.audio_formats import (
+    SUPPORTED_AUDIO_MIME_TYPES,
+    audio_extension,
+    has_expected_audio_signature,
+    normalise_audio_mime_type,
+)
 from app.services.audit import write_audit
 from app.services.intake import ensure_active_consent, next_question
 from app.services.storage import AzureBlobDocumentStorage
 
 router = APIRouter(tags=["assistive-adapters"])
-SUPPORTED_AUDIO_MIME_TYPES = {"audio/wav", "audio/x-wav", "audio/mpeg"}
-
-
-def has_expected_audio_signature(content: bytes, mime_type: str) -> bool:
-    if mime_type in {"audio/wav", "audio/x-wav"}:
-        return content.startswith(b"RIFF") and content[8:12] == b"WAVE"
-    if mime_type == "audio/mpeg":
-        return content.startswith(b"ID3") or content.startswith(b"\xff\xfb")
-    return False
 
 
 async def get_document_or_404(session: AsyncSession, document_id: UUID) -> Document:
@@ -72,15 +70,24 @@ async def create_transcription(
 ) -> AssistiveArtifactResponse:
     ensure_encounter_access(principal, encounter_id)
     await ensure_active_consent(session, encounter_id)
-    if audio.content_type not in SUPPORTED_AUDIO_MIME_TYPES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only WAV and MP3 synthetic audio is accepted")
+    audio_mime_type = normalise_audio_mime_type(audio.content_type)
+    if audio_mime_type not in SUPPORTED_AUDIO_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Supported audio formats are WebM/Opus, Ogg/Opus, M4A/MP4, WAV, and MP3.",
+        )
     content = await audio.read(get_settings().max_upload_bytes + 1)
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Audio upload is empty")
     if len(content) > get_settings().max_upload_bytes:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Audio upload is too large")
-    if not has_expected_audio_signature(content, audio.content_type):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Audio content does not match its declared type")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Audio upload is too large"
+        )
+    if not has_expected_audio_signature(content, audio_mime_type):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Audio content does not match its declared type",
+        )
 
     settings = get_settings()
     adapter_mode = settings.speech_adapter_mode.strip().lower()
@@ -88,7 +95,10 @@ async def create_transcription(
         output = mock_transcription(adapter_mode, fixture_id, language)
     elif adapter_mode == "openai_compatible":
         output = await OpenAICompatibleSpeechAdapter(settings).transcribe(
-            content, audio.filename or "audio.wav", audio.content_type, language
+            content,
+            audio.filename or f"audio.{audio_extension(audio_mime_type)}",
+            audio_mime_type,
+            language,
         )
     elif adapter_mode == "disabled":
         raise DomainError(
@@ -140,10 +150,13 @@ async def synthesize_next_question_prompt(
     await ensure_active_consent(session, encounter_id)
     question = await next_question(session, encounter)
     if question is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The configured pathway is already complete")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="The configured pathway is already complete"
+        )
     settings = get_settings()
     patient = await session.get(Patient, encounter.patient_id)
     language = (patient.preferred_language if patient and patient.preferred_language else "en") or "en"
+    question = localise_question(question, language)
     audio_content, prompt_id, is_cached = await get_or_synthesize_question_audio(
         session=session,
         settings=settings,
@@ -177,7 +190,11 @@ async def synthesize_next_question_prompt(
     )
 
 
-@router.post("/documents/{document_id}/extractions", response_model=AssistiveArtifactResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/documents/{document_id}/extractions",
+    response_model=AssistiveArtifactResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_document_extraction(
     document_id: UUID,
     payload: DocumentExtractionRequest,
@@ -361,7 +378,10 @@ async def get_latest_document_extraction(
     ensure_encounter_access(principal, document.encounter_id)
     artifact = await session.scalar(
         select(AssistiveArtifact)
-        .where(AssistiveArtifact.document_id == document_id, AssistiveArtifact.artifact_type == "document_extraction")
+        .where(
+            AssistiveArtifact.document_id == document_id,
+            AssistiveArtifact.artifact_type == "document_extraction",
+        )
         .order_by(AssistiveArtifact.created_at.desc())
     )
     if artifact is None:

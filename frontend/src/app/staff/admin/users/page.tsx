@@ -24,8 +24,10 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<CreatedUser[]>([]);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("medikiosk.staff_token");
-    setToken(saved);
+    const timer = window.setTimeout(() => {
+      setToken(sessionStorage.getItem("medikiosk.staff_token"));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function handleCreateUser(e: React.FormEvent) {

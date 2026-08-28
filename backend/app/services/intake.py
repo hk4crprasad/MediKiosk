@@ -25,7 +25,9 @@ async def ensure_active_consent(session: AsyncSession, encounter_id: UUID) -> No
         )
     )
     if consent is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Active clinical-intake consent is required")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Active clinical-intake consent is required"
+        )
 
 
 async def answer_map(session: AsyncSession, encounter_id: UUID) -> dict[str, object]:
@@ -41,7 +43,9 @@ async def answer_map(session: AsyncSession, encounter_id: UUID) -> dict[str, obj
 
 async def next_question(session: AsyncSession, encounter: Encounter) -> dict | None:
     if not is_supported_pathway(encounter.pathway_version):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Configured pathway version is not available")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Configured pathway version is not available"
+        )
     answers = await answer_map(session, encounter.id)
     for question in active_questions(encounter.pathway_version, answers):
         if question["key"] not in answers:
@@ -53,20 +57,30 @@ async def submit_response(
     session: AsyncSession, encounter: Encounter, payload: IntakeResponseCreateRequest
 ) -> tuple[PatientResponse, list[ClinicalFact], list[RedFlag]]:
     await ensure_active_consent(session, encounter.id)
-    if encounter.status not in {EncounterStatus.draft, EncounterStatus.in_progress, EncounterStatus.urgent_review}:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Encounter cannot accept intake responses")
+    if encounter.status not in {
+        EncounterStatus.draft,
+        EncounterStatus.in_progress,
+        EncounterStatus.urgent_review,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Encounter cannot accept intake responses"
+        )
 
     answers = await answer_map(session, encounter.id)
     question = await next_question(session, encounter)
     if question is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The configured pathway is already complete")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="The configured pathway is already complete"
+        )
     if payload.question_key != question["key"]:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={"message": "Response is out of sequence", "expected_question_key": question["key"]},
         )
     if question["input_type"] != "single_choice":
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Configured kiosk question is invalid")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Configured kiosk question is invalid"
+        )
     if payload.value not in question["choices"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -102,7 +116,9 @@ async def submit_response(
     return response, [fact], flags
 
 
-async def evaluate_red_flags(session: AsyncSession, encounter: Encounter, answers: dict[str, object]) -> list[RedFlag]:
+async def evaluate_red_flags(
+    session: AsyncSession, encounter: Encounter, answers: dict[str, object]
+) -> list[RedFlag]:
     if encounter.pathway_version != CHEST_PATHWAY_VERSION:
         return []
     triggered: list[RedFlag] = []
@@ -146,7 +162,9 @@ async def evaluate_red_flags(session: AsyncSession, encounter: Encounter, answer
 
 async def required_missing(session: AsyncSession, encounter: Encounter) -> list[str]:
     if not is_supported_pathway(encounter.pathway_version):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Configured pathway version is not available")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Configured pathway version is not available"
+        )
     answers = await answer_map(session, encounter.id)
     return [
         question["key"]

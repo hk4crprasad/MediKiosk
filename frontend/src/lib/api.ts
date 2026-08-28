@@ -1,3 +1,5 @@
+import { audioFilename } from "@/lib/audio-recording";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 export class ApiError extends Error {
@@ -21,8 +23,9 @@ async function request<T>(path: string, { body, token, ...options }: RequestOpti
 
 export type Pathway = "chest-discomfort-v1" | "fever-v1" | "headache-v1" | "abdominal-pain-v1" | "ayush-dashavidha-v1";
 export type EncounterCreated = { encounter: { id: string; pathway_version: Pathway; status: string }; kiosk_session_token: string };
-export type Question = { key: string; prompt: string; input_type: "single_choice"; required: boolean; choices: string[]; pathway_version: string };
-export type Fact = { id: string; fact_type: string; value: { value?: unknown }; verification_status: string };
+export type KioskLanguage = "en" | "hi";
+export type Question = { key: string; prompt: string; input_type: "single_choice"; required: boolean; choices: string[]; choice_labels?: Record<string, string>; pathway_version: string };
+export type Fact = { id: string; fact_type: string; value: { value?: unknown }; verification_status: string; display_label?: string | null; display_value?: string | null };
 export type StaffToken = { access_token: string; expires_in_seconds: number };
 export type TriageQueueItem = { encounter_id: string; encounter_status: string; patient_display_name: string | null; red_flag: { id: string; severity: string; reason: string; rule_id: string; acknowledged_at: string | null } };
 export type ClinicianEncounter = {
@@ -80,7 +83,7 @@ export const createEncounter = (payload: {
   displayName?: string;
   birthYear?: number;
   sex?: string;
-  language: string;
+  language: KioskLanguage;
   pathway: Pathway;
   abhaIdentifier?: string;
 }) =>
@@ -98,9 +101,9 @@ export const createEncounter = (payload: {
       pathway_version: payload.pathway,
     },
   });
-export const recordConsent = (id: string, token: string, language: string) => request(`/encounters/${id}/consents`, { method: "POST", token, body: { consent_type: "clinical_intake", version: "v1", language, granted: true } });
+export const recordConsent = (id: string, token: string, language: KioskLanguage) => request(`/encounters/${id}/consents`, { method: "POST", token, body: { consent_type: "clinical_intake", version: "v1", language, granted: true } });
 export const getNextQuestion = (id: string, token: string) => request<Question | null>(`/encounters/${id}/intake/next-question`, { token });
-export const submitAnswer = (id: string, token: string, question: Question, value: string, rawText?: string) => request(`/encounters/${id}/intake/responses`, { method: "POST", token, body: { question_key: question.key, value, input_mode: "touch", language: "en", raw_text: rawText?.trim() || null } });
+export const submitAnswer = (id: string, token: string, question: Question, value: string, language: KioskLanguage, rawText?: string) => request(`/encounters/${id}/intake/responses`, { method: "POST", token, body: { question_key: question.key, value, input_mode: "touch", language, raw_text: rawText?.trim() || null } });
 export const getFacts = (id: string, token: string) => request<Fact[]>(`/encounters/${id}/facts`, { token });
 export const submitIntake = (id: string, token: string) => request(`/encounters/${id}/submit`, { method: "POST", token });
 export const login = (email: string, password: string) => request<StaffToken>("/auth/login", { method: "POST", body: { email, password } });
@@ -194,7 +197,7 @@ export type CurrentUser = { id: string; email: string; role: string; active: boo
 export const getMe = (token: string) => request<CurrentUser>("/auth/me", { token });
 
 // Consent management
-export type ConsentRecord = { id: string; encounter_id: string; consent_type: string; version: string; language: string; granted: boolean; created_at: string };
+export type ConsentRecord = { id: string; encounter_id: string; consent_type: string; version: string; language: KioskLanguage; granted: boolean; created_at: string; revoked_at?: string | null };
 export const listConsents = (encounterId: string, token: string) =>
   request<ConsentRecord[]>(`/encounters/${encounterId}/consents`, { token });
 export const revokeConsent = (encounterId: string, consentId: string, token: string) =>
@@ -203,7 +206,7 @@ export const revokeConsent = (encounterId: string, consentId: string, token: str
 // Speech ASR
 export async function transcribeAudio(encounterId: string, token: string, audioBlob: Blob, language: string = "en", fixtureId: string = "en_general_v1"): Promise<AssistiveArtifact> {
   const formData = new FormData();
-  formData.append("audio", audioBlob, "recording.wav");
+  formData.append("audio", audioBlob, audioFilename(audioBlob.type));
   formData.append("language", language);
   formData.append("fixture_id", fixtureId);
   const response = await fetch(`${API_BASE_URL}/encounters/${encounterId}/speech/transcriptions`, {
