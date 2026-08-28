@@ -323,7 +323,7 @@ export default function StaffEncounterPage() {
                         <textarea
                           className="text-input"
                           rows={10}
-                          style={{ width: "100%", fontFamily: "inherit", padding: "0.75rem", background: "rgba(0,0,0,0.2)", color: "inherit", borderRadius: "8px", border: "1px solid var(--border, #4b5563)" }}
+                          style={{ width: "100%", fontFamily: "inherit", padding: "0.75rem", background: "var(--white)", color: "#111111", borderRadius: "8px", border: "1px solid var(--line)" }}
                           value={summaryText}
                           onChange={(e) => setSummaryText(e.target.value)}
                         />
@@ -336,7 +336,7 @@ export default function StaffEncounterPage() {
                       </div>
                     ) : (
                       <div>
-                        <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: "0.95rem", lineHeight: "1.5", margin: "0.5rem 0", color: "#e2e8f0" }}>{summary.text}</pre>
+                        <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: "0.95rem", lineHeight: "1.5", margin: "0.5rem 0", color: "#111111" }}>{summary.text}</pre>
                         <div className="button-row" style={{ marginTop: "1rem" }}>
                           <button className="button-secondary" onClick={() => setEditingSummary(true)} type="button">✎ Edit summary</button>
                           {summary.status !== "ACCEPTED" && (
