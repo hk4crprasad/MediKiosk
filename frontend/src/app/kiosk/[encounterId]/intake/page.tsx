@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DocumentUploadSection } from "@/components/kiosk/document-upload-section";
 import { QuestionAudioButton } from "@/components/kiosk/question-audio-button";
 import { VoiceRecordButton } from "@/components/kiosk/voice-record-button";
+import { QRCodeSVG } from "@/components/common/qr-code";
 import {
   ApiError,
   Fact,
@@ -258,6 +259,36 @@ export default function IntakePage() {
 
           {token && !loading && submitted && <>
             <div className="submission-complete"><span>✓</span><div><p className="eyebrow">{text("Secure hand-off complete", "सुरक्षित हस्तांतरण पूरा")}</p><h1 className="display">{text("Your intake is with the clinical team.", "आपका इंटेक क्लिनिकल टीम के पास है।")}</h1></div></div>
+
+            {/* Instant OPD Token Slip */}
+            <div style={{ margin: "1.5rem 0", padding: "1.25rem", borderRadius: "12px", border: "2px dashed var(--teal)", background: "rgba(11, 116, 109, 0.05)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
+              <div style={{ flex: 1, minWidth: "220px" }}>
+                <span className="tag" style={{ background: "var(--teal)", color: "#ffffff", fontSize: "0.8rem", padding: "0.3rem 0.6rem" }}>
+                  🎫 {text("OPD Token Issued", "OPD टोकन जारी")}
+                </span>
+                <h2 className="display" style={{ fontSize: "2rem", margin: "0.5rem 0 0.25rem", color: "var(--teal-dark)" }}>
+                  #OPD-{encounterId.slice(0, 6).toUpperCase()}
+                </h2>
+                <p style={{ margin: "0.25rem 0", fontSize: "0.95rem", fontWeight: 600 }}>
+                  {text("Proceed to Consultation Desk / OPD Room 12", "परामर्श कक्ष / OPD कमरा नंबर 12 पर जाएँ")}
+                </p>
+                <small style={{ color: "var(--ink-soft)", display: "block", marginTop: "0.5rem" }}>
+                  {text("Show this QR code to the attending nurse or physician.", "यह QR कोड ड्यूटी पर उपस्थित नर्स या चिकित्सक को दिखाएँ।")}
+                </small>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                <QRCodeSVG value={`https://medikiosk.gov.in/staff/encounters/${encounterId}`} size={130} />
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => window.print()}
+                  style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem", background: "var(--white)" }}
+                >
+                  🖨️ {text("Print Token", "टोकन प्रिंट करें")}
+                </button>
+              </div>
+            </div>
+
             <p className="panel-copy kiosk-copy">{text("For privacy, this kiosk will reset in", "गोपनीयता के लिए यह कियोस्क रीसेट होगा:")} <strong>{submissionSecondsLeft}</strong> {text("seconds. Please stay nearby if you need urgent help.", "सेकंड में। यदि आपको तुरंत सहायता चाहिए तो पास ही रहें और कर्मचारी को बताएँ।")}</p>
             <div className="button-row kiosk-action-row"><button className="button-secondary kiosk-secondary" onClick={resetToStart} type="button">{text("Reset now", "अभी रीसेट करें")}</button></div>
           </>}

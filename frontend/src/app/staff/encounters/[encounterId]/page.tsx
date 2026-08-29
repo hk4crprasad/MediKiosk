@@ -28,6 +28,7 @@ import {
   DocumentMetadata,
 } from "@/lib/api";
 import { evaluateEncounterAbnormalities } from "@/lib/clinical-eval";
+import { evaluateAyushProfile } from "@/lib/ayush-eval";
 
 export default function StaffEncounterPage() {
   const { encounterId } = useParams<{ encounterId: string }>();
@@ -48,6 +49,11 @@ export default function StaffEncounterPage() {
     if (!record) return { labAlerts: [], drugAlerts: [], hasUrgentFindings: false };
     return evaluateEncounterAbnormalities(record.facts, record.documents, timeline);
   }, [record, timeline]);
+
+  const ayushProfile = useMemo(() => {
+    if (!record) return null;
+    return evaluateAyushProfile(record.facts);
+  }, [record]);
 
   const loadRecord = useCallback(async () => {
     const token = sessionStorage.getItem("medikiosk.staff_token");
@@ -337,6 +343,72 @@ export default function StaffEncounterPage() {
                       {record.patient.respondent_type === "caregiver" ? `👥 Caregiver Assisted (${record.patient.caregiver_relationship || "Relative"})` : "👤 Patient Self-Report"}
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* Ayurvedic Prakriti & Tridosha Assessment Panel */}
+              {ayushProfile && (
+                <div style={{ marginTop: "1.25rem", padding: "1.25rem", borderRadius: "12px", border: "1px solid #10b981", background: "rgba(16, 185, 129, 0.04)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div>
+                      <span className="tag" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#065f46", fontSize: "0.75rem" }}>
+                        🌿 AYUSH Clinical Intelligence
+                      </span>
+                      <h2 className="display" style={{ fontSize: "1.25rem", margin: "0.25rem 0 0", color: "#065f46" }}>
+                        Prakriti & Dashavidha Pariksha Analysis
+                      </h2>
+                    </div>
+                    <span className="tag" style={{ fontSize: "0.8rem", padding: "0.3rem 0.6rem" }}>
+                      Dominant: <strong>{ayushProfile.dominantDosha}</strong>
+                    </span>
+                  </div>
+
+                  {/* Tridosha Bar */}
+                  <div style={{ margin: "0.75rem 0 1rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.3rem" }}>
+                      <span style={{ color: "#d97706" }}>💨 Vata: {ayushProfile.vataPct}%</span>
+                      <span style={{ color: "#ea580c" }}>🔥 Pitta: {ayushProfile.pittaPct}%</span>
+                      <span style={{ color: "#059669" }}>🌊 Kapha: {ayushProfile.kaphaPct}%</span>
+                    </div>
+                    <div style={{ display: "flex", height: "10px", borderRadius: "99px", overflow: "hidden", background: "#e2e8f0" }}>
+                      <div style={{ width: `${ayushProfile.vataPct}%`, background: "#f59e0b" }} title={`Vata: ${ayushProfile.vataPct}%`} />
+                      <div style={{ width: `${ayushProfile.pittaPct}%`, background: "#f97316" }} title={`Pitta: ${ayushProfile.pittaPct}%`} />
+                      <div style={{ width: `${ayushProfile.kaphaPct}%`, background: "#10b981" }} title={`Kapha: ${ayushProfile.kaphaPct}%`} />
+                    </div>
+                  </div>
+
+                  {/* Ayurvedic Clinical Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.75rem", marginTop: "0.5rem" }}>
+                    <div className="data-card" style={{ padding: "0.75rem 1rem", borderLeft: "3px solid #f97316" }}>
+                      <small style={{ color: "#ea580c", fontWeight: 700, display: "block" }}>🔥 Agni (Digestive Fire)</small>
+                      <strong style={{ fontSize: "0.9rem" }}>{ayushProfile.agniType}</strong>
+                      <p style={{ fontSize: "0.8rem", margin: "0.2rem 0 0", color: "var(--ink-soft)" }}>{ayushProfile.agniDescription}</p>
+                    </div>
+                    <div className="data-card" style={{ padding: "0.75rem 1rem", borderLeft: "3px solid #f59e0b" }}>
+                      <small style={{ color: "#d97706", fontWeight: 700, display: "block" }}>🌿 Koshtha (Bowel Nature)</small>
+                      <strong style={{ fontSize: "0.9rem" }}>{ayushProfile.koshthaType}</strong>
+                      <p style={{ fontSize: "0.8rem", margin: "0.2rem 0 0", color: "var(--ink-soft)" }}>{ayushProfile.koshthaDescription}</p>
+                    </div>
+                    <div className="data-card" style={{ padding: "0.75rem 1rem", borderLeft: "3px solid #3b82f6" }}>
+                      <small style={{ color: "#2563eb", fontWeight: 700, display: "block" }}>🧠 Sattva (Mental Resilience)</small>
+                      <strong style={{ fontSize: "0.9rem" }}>{ayushProfile.sattvaLevel}</strong>
+                    </div>
+                    <div className="data-card" style={{ padding: "0.75rem 1rem", borderLeft: "3px solid #10b981" }}>
+                      <small style={{ color: "#059669", fontWeight: 700, display: "block" }}>💪 Dhatu Sara (Tissue Integrity)</small>
+                      <strong style={{ fontSize: "0.9rem" }}>{ayushProfile.dhatuSara}</strong>
+                    </div>
+                  </div>
+
+                  {/* Ahara & Vihara Lifestyle tags */}
+                  {ayushProfile.lifestyleFactors.length > 0 && (
+                    <div style={{ marginTop: "0.75rem", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                      {ayushProfile.lifestyleFactors.map((factor, i) => (
+                        <span key={i} className="tag" style={{ background: "rgba(255,255,255,0.7)", border: "1px solid #10b981", color: "#065f46", fontSize: "0.75rem" }}>
+                          {factor}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
