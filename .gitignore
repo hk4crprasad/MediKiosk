@@ -1,4 +1,5 @@
-
+node_modules/
+.next/
 
 # Local Firecrawl search/parse cache
 .firecrawl/
