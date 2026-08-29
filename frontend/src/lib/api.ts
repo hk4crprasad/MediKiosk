@@ -28,8 +28,19 @@ export type Question = { key: string; prompt: string; input_type: "single_choice
 export type Fact = { id: string; fact_type: string; value: { value?: unknown }; verification_status: string; display_label?: string | null; display_value?: string | null };
 export type StaffToken = { access_token: string; expires_in_seconds: number };
 export type TriageQueueItem = { encounter_id: string; encounter_status: string; patient_display_name: string | null; red_flag: { id: string; severity: string; reason: string; rule_id: string; acknowledged_at: string | null } };
+export type PatientInfo = {
+  display_name: string | null;
+  birth_year: number | null;
+  sex: string | null;
+  preferred_language: KioskLanguage;
+  abha_identifier?: string | null;
+  respondent_type: "patient" | "caregiver";
+  caregiver_relationship?: string | null;
+};
+
 export type ClinicianEncounter = {
   encounter: { id: string; status: string; pathway_version: string; created_at?: string };
+  patient?: PatientInfo | null;
   facts: Fact[];
   red_flags: Array<{ id: string; severity: string; reason: string; active: boolean; acknowledged_at: string | null }>;
   documents: Array<{ id: string; original_filename: string; status: string; created_at?: string }>;
@@ -86,6 +97,8 @@ export const createEncounter = (payload: {
   language: KioskLanguage;
   pathway: Pathway;
   abhaIdentifier?: string;
+  respondentType?: "patient" | "caregiver";
+  caregiverRelationship?: string;
 }) =>
   request<EncounterCreated>("/encounters", {
     method: "POST",
@@ -96,6 +109,8 @@ export const createEncounter = (payload: {
         sex: payload.sex || null,
         preferred_language: payload.language,
         abha_identifier: payload.abhaIdentifier || null,
+        respondent_type: payload.respondentType || "patient",
+        caregiver_relationship: payload.caregiverRelationship || null,
       },
       mode: "kiosk",
       pathway_version: payload.pathway,

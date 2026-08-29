@@ -91,6 +91,8 @@ class Patient(TimestampedModel, Base):
     sex: Mapped[str | None] = mapped_column(String(32))
     preferred_language: Mapped[str] = mapped_column(String(16), default="en", nullable=False)
     abha_identifier: Mapped[str | None] = mapped_column(String(64), unique=True)
+    respondent_type: Mapped[str] = mapped_column(String(32), default="patient", nullable=False)
+    caregiver_relationship: Mapped[str | None] = mapped_column(String(64))
 
 
 class Encounter(TimestampedModel, Base):

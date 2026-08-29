@@ -23,6 +23,21 @@ import { clearKioskSession, useKioskSessionReset } from "@/lib/kiosk-session";
 
 const SUBMISSION_RESET_SECONDS = 8;
 
+function getChoiceIcon(value: string, questionKey: string): string {
+  if (questionKey.includes("severity") || value === "mild" || value === "moderate" || value === "severe" || value === "very_severe") {
+    switch (value) {
+      case "mild": return "🙂 ";
+      case "moderate": return "😐 ";
+      case "severe": return "😣 ";
+      case "very_severe": return "😫 ";
+      case "none": case "no_pain": return "😊 ";
+    }
+  }
+  if (value === "yes") return "✓ ";
+  if (value === "no") return "✕ ";
+  return "";
+}
+
 function choiceLabel(value: string, labels: Record<string, string> = {}) {
   return labels[value] ?? value
     .replace("_c", "°C")
@@ -45,11 +60,38 @@ export default function IntakePage() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submissionSecondsLeft, setSubmissionSecondsLeft] = useState(SUBMISSION_RESET_SECONDS);
+  const [isPlayingRecap, setIsPlayingRecap] = useState(false);
   const [error, setError] = useState("");
   const hindi = language === "hi";
   const text = (english: string, hindiText: string) => (hindi ? hindiText : english);
 
+  function handleAudioRecap() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    if (isPlayingRecap) {
+      setIsPlayingRecap(false);
+      return;
+    }
+    const recapItems = facts.map((f) => `${f.display_label ?? f.fact_type.replaceAll("_", " ")}: ${f.display_value ?? String(f.value.value ?? "")}`);
+    const intro = hindi
+      ? "यहाँ आपकी दर्ज की गई जानकारी का विवरण है: "
+      : "Here is the summary of your recorded intake: ";
+    const outro = hindi
+      ? "। यदि यह सही है, तो क्लिनिकल टीम को भेजें पर टैप करें।"
+      : ". If this is correct, please tap send to clinical team.";
+    const fullSpeech = `${intro} ${recapItems.join(". ")} ${outro}`;
+
+    const utterance = new SpeechSynthesisUtterance(fullSpeech);
+    utterance.lang = hindi ? "hi-IN" : "en-IN";
+    utterance.rate = 0.9;
+    utterance.onstart = () => setIsPlayingRecap(true);
+    utterance.onend = () => setIsPlayingRecap(false);
+    utterance.onerror = () => setIsPlayingRecap(false);
+    window.speechSynthesis.speak(utterance);
+  }
+
   const resetToStart = useCallback(() => {
+    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
     clearKioskSession();
     router.replace("/kiosk/start");
   }, [router]);
@@ -180,7 +222,11 @@ export default function IntakePage() {
             <h1 className="display kiosk-question">{question.prompt}</h1>
             <p className="panel-copy kiosk-copy">{text("Choose the option that fits best. Your clinical team will review the information with you.", "जो विकल्प सबसे सही हो उसे चुनें। आपकी क्लिनिकल टीम इस जानकारी की समीक्षा करेगी।")}</p>
             <div aria-label={text("Answer choices", "उत्तर विकल्प")} className="kiosk-choice-grid">
-              {question.choices.map((option) => <button aria-pressed={answer === option} className={`choice kiosk-choice ${answer === option ? "selected" : ""}`} key={option} onClick={() => setAnswer(option)} type="button"><strong>{choiceLabel(option, question.choice_labels)}</strong></button>)}
+              {question.choices.map((option) => (
+                <button aria-pressed={answer === option} className={`choice kiosk-choice ${answer === option ? "selected" : ""}`} key={option} onClick={() => setAnswer(option)} type="button">
+                  <strong>{getChoiceIcon(option, question.key)}{choiceLabel(option, question.choice_labels)}</strong>
+                </button>
+              ))}
             </div>
             <div className="additional-input">
               <label htmlFor="additionalInput">{text("Optional spoken or caregiver note", "वैकल्पिक बोला गया या देखभालकर्ता का नोट")}</label>
@@ -191,8 +237,20 @@ export default function IntakePage() {
           </>}
 
           {token && !loading && question === null && !submitted && <>
-            <h1 className="display">{text("Review before sending.", "भेजने से पहले समीक्षा करें।")}</h1>
-            <p className="panel-copy kiosk-copy">{text("Your responses create a pre-consultation record. They do not provide a diagnosis.", "आपके उत्तर परामर्श-पूर्व रिकॉर्ड बनाते हैं। ये निदान नहीं देते।")}</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div>
+                <h1 className="display" style={{ margin: 0 }}>{text("Review before sending.", "भेजने से पहले समीक्षा करें।")}</h1>
+                <p className="panel-copy kiosk-copy" style={{ marginTop: "0.25rem" }}>{text("Your responses create a pre-consultation record. They do not provide a diagnosis.", "आपके उत्तर परामर्श-पूर्व रिकॉर्ड बनाते हैं। ये निदान नहीं देते।")}</p>
+              </div>
+              <button
+                type="button"
+                className="button-secondary kiosk-secondary"
+                onClick={handleAudioRecap}
+                style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem", background: isPlayingRecap ? "var(--accent)" : undefined }}
+              >
+                {isPlayingRecap ? "⏹ " + text("Stop read-aloud", "बोलना रोकें") : "🔊 " + text("Listen to recap aloud", "पूरी जानकारी बोलकर सुनें")}
+              </button>
+            </div>
             <div className="data-list">{facts.length ? facts.map((fact) => <div className="data-card" key={fact.id}><strong>{fact.display_label ?? fact.fact_type.replaceAll("_", " ")}</strong><p>{fact.display_value ?? String(fact.value.value ?? text("Recorded", "दर्ज"))}</p></div>) : <p className="notice">{text("No answers were recorded for this pathway.", "इस प्रवाह के लिए कोई उत्तर दर्ज नहीं हुआ।")}</p>}</div>
             <DocumentUploadSection encounterId={encounterId} language={language} token={token} />
             <div className="button-row kiosk-action-row"><button className="button-primary kiosk-primary" disabled={saving} onClick={finishIntake} type="button">{saving ? text("Sending…", "भेजा जा रहा है…") : text("Send to clinical team →", "क्लिनिकल टीम को भेजें →")}</button><button className="button-secondary kiosk-danger" disabled={saving} onClick={handleRevokeConsent} type="button">🔒 {text("End session & revoke consent", "सत्र समाप्त करें और सहमति वापस लें")}</button></div>

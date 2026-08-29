@@ -35,6 +35,14 @@ async def create_local_export(session: AsyncSession, encounter: Encounter) -> Fh
                 else [],
                 "name": [{"text": patient.display_name or "Synthetic patient"}],
                 "gender": patient.sex,
+                "contact": [
+                    {
+                        "relationship": [{"text": patient.caregiver_relationship or "Caregiver / Attendant"}],
+                        "name": {"text": "Accompanying Caregiver"},
+                    }
+                ]
+                if patient.respondent_type == "caregiver"
+                else [],
             }
         },
         {

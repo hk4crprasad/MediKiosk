@@ -14,6 +14,8 @@ class PatientInput(BaseModel):
     sex: str | None = Field(default=None, max_length=32)
     preferred_language: Literal["en", "hi"] = "en"
     abha_identifier: str | None = Field(default=None, max_length=64)
+    respondent_type: Literal["patient", "caregiver"] = "patient"
+    caregiver_relationship: str | None = Field(default=None, max_length=64)
 
 
 class EncounterCreateRequest(BaseModel):

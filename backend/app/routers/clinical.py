@@ -84,6 +84,8 @@ async def list_all_encounters(
             patient_birth_year=patient.birth_year,
             patient_sex=patient.sex,
             patient_abha_identifier=patient.abha_identifier,
+            patient_respondent_type=patient.respondent_type,
+            patient_caregiver_relationship=patient.caregiver_relationship,
             has_active_red_flag=flag_count > 0,
             created_at=encounter.created_at,
             submitted_at=encounter.submitted_at,
@@ -129,6 +131,7 @@ async def clinician_encounter(
     encounter = await get_encounter_or_404(session, encounter_id)
     if encounter.status == EncounterStatus.submitted:
         encounter.status = EncounterStatus.in_review
+    patient = await session.get(Patient, encounter.patient_id)
     facts = (
         await session.scalars(
             select(ClinicalFact)
@@ -151,6 +154,7 @@ async def clinician_encounter(
     await session.commit()
     return ClinicianEncounterResponse(
         encounter=EncounterResponse.model_validate(encounter),
+        patient=PatientInput.model_validate(patient) if patient else None,
         facts=[FactResponse.model_validate(fact) for fact in facts],
         red_flags=[RedFlagResponse.model_validate(flag) for flag in flags],
         documents=[DocumentResponse.model_validate(document) for document in documents],

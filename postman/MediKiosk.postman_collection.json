@@ -1,393 +1,1430 @@
 {
   "info": {
     "_postman_id": "5f47b731-cd39-4f93-979f-836bdf04e29c",
-    "name": "MediKiosk API — Planned Contract",
+    "name": "MediKiosk API \u2014 Planned Contract",
     "description": "Living FastAPI contract collection. No endpoint is marked verified by this collection alone. The user must execute each request in Postman and explicitly accept its result before the related backend slice advances. Never export real credentials or patient data with this collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
-    { "key": "api_prefix", "value": "/api/v1", "type": "string" },
-    { "key": "staff_access_token", "value": "SET_IN_POSTMAN_ENVIRONMENT", "type": "string" },
-    { "key": "kiosk_session_token", "value": "SET_IN_POSTMAN_ENVIRONMENT", "type": "string" },
-    { "key": "encounter_id", "value": "SET_AFTER_CREATE", "type": "string" },
-    { "key": "document_id", "value": "SET_AFTER_UPLOAD", "type": "string" },
-    { "key": "red_flag_id", "value": "SET_AFTER_RULE_TRIGGER", "type": "string" },
-    { "key": "consent_id", "value": "SET_AFTER_CONSENT", "type": "string" },
-    { "key": "export_id", "value": "SET_AFTER_EXPORT", "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "api_prefix",
+      "value": "/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "staff_access_token",
+      "value": "SET_IN_POSTMAN_ENVIRONMENT",
+      "type": "string"
+    },
+    {
+      "key": "kiosk_session_token",
+      "value": "SET_IN_POSTMAN_ENVIRONMENT",
+      "type": "string"
+    },
+    {
+      "key": "encounter_id",
+      "value": "SET_AFTER_CREATE",
+      "type": "string"
+    },
+    {
+      "key": "document_id",
+      "value": "SET_AFTER_UPLOAD",
+      "type": "string"
+    },
+    {
+      "key": "red_flag_id",
+      "value": "SET_AFTER_RULE_TRIGGER",
+      "type": "string"
+    },
+    {
+      "key": "consent_id",
+      "value": "SET_AFTER_CONSENT",
+      "type": "string"
+    },
+    {
+      "key": "export_id",
+      "value": "SET_AFTER_EXPORT",
+      "type": "string"
+    }
   ],
   "item": [
     {
-      "name": "B0 — Foundation (user test gate H-01 to H-02)",
+      "name": "B0 \u2014 Foundation (user test gate H-01 to H-02)",
       "item": [
         {
           "name": "H-01 GET /health",
-          "request": { "method": "GET", "header": [], "url": "{{base_url}}/health", "description": "User check: process liveness only; must not call external AI providers." },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health",
+            "description": "User check: process liveness only; must not call external AI providers."
+          },
           "response": []
         },
         {
           "name": "H-02 GET /ready",
-          "request": { "method": "GET", "header": [], "url": "{{base_url}}/ready", "description": "User check: readiness reports database/migration availability without disclosing secrets." },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/ready",
+            "description": "User check: readiness reports database/migration availability without disclosing secrets."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "B1 — Auth, encounter, consent (user test gate A/E/C)",
+      "name": "B1 \u2014 Auth, encounter, consent (user test gate A/E/C)",
       "item": [
         {
           "name": "A-01 POST /auth/login",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@medikiosk.local\",\n  \"password\": \"SET_IN_POSTMAN_ENVIRONMENT\"\n}" }, "url": "{{base_url}}{{api_prefix}}/auth/login", "description": "User records status and request ID; set the returned staff token manually in the Postman environment." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@medikiosk.local\",\n  \"password\": \"SET_IN_POSTMAN_ENVIRONMENT\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/auth/login",
+            "description": "User records status and request ID; set the returned staff token manually in the Postman environment."
+          },
           "response": []
         },
         {
           "name": "A-03 GET /auth/me",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/auth/me", "description": "User verifies only expected identity and role fields are exposed." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/auth/me",
+            "description": "User verifies only expected identity and role fields are exposed."
+          },
           "response": []
         },
         {
-          "name": "A-04 POST /admin/users — provision test role",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"triage.synthetic@medikiosk.local\",\n  \"password\": \"SET_A_SYNTHETIC_TEST_PASSWORD\",\n  \"role\": \"triage\"\n}" }, "url": "{{base_url}}{{api_prefix}}/admin/users", "description": "User verifies admin-only access and records duplicate-email/unauthorised behavior separately. Do not use a real user or password." },
+          "name": "A-04 POST /admin/users \u2014 provision test role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"triage.synthetic@medikiosk.local\",\n  \"password\": \"SET_A_SYNTHETIC_TEST_PASSWORD\",\n  \"role\": \"triage\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/admin/users",
+            "description": "User verifies admin-only access and records duplicate-email/unauthorised behavior separately. Do not use a real user or password."
+          },
           "response": []
         },
         {
           "name": "E-01 POST /encounters",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\n    \"display_name\": \"Synthetic Patient A\",\n    \"birth_year\": 1980,\n    \"sex\": \"female\",\n    \"preferred_language\": \"en\"\n  },\n  \"mode\": \"kiosk\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Planned sample only. User sets encounter_id and kiosk_session_token manually after examining the response." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient\": {\n    \"display_name\": \"Synthetic Patient A\",\n    \"birth_year\": 1980,\n    \"sex\": \"female\",\n    \"preferred_language\": \"en\"\n  },\n  \"mode\": \"kiosk\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters",
+            "description": "Planned sample only. User sets encounter_id and kiosk_session_token manually after examining the response."
+          },
           "response": []
         },
         {
           "name": "E-02 GET /encounters/{encounter_id}",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}", "description": "User tests permitted kiosk access and separately records a denied cross-encounter attempt." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}",
+            "description": "User tests permitted kiosk access and separately records a denied cross-encounter attempt."
+          },
           "response": []
         },
         {
           "name": "C-01 POST /encounters/{encounter_id}/consents",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"consent_type\": \"clinical_intake\",\n  \"version\": \"v1\",\n  \"language\": \"en\",\n  \"granted\": true\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents", "description": "User verifies immutable, versioned consent receipt; set consent_id manually from the response. Do not use real consent text until approved." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consent_type\": \"clinical_intake\",\n  \"version\": \"v1\",\n  \"language\": \"en\",\n  \"granted\": true\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents",
+            "description": "User verifies immutable, versioned consent receipt; set consent_id manually from the response. Do not use real consent text until approved."
+          },
           "response": []
         },
         {
           "name": "C-02 GET /encounters/{encounter_id}/consents",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents", "description": "User verifies consent history/current state and kiosk authorisation behavior." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents",
+            "description": "User verifies consent history/current state and kiosk authorisation behavior."
+          },
           "response": []
         },
         {
           "name": "C-03 POST /consents/{consent_id}/revocations",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents/{{consent_id}}/revocations", "description": "Run only on a separate synthetic encounter after the intake path test. User verifies the receipt remains visible, has revoked_at, and further intake is blocked." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents/{{consent_id}}/revocations",
+            "description": "Run only on a separate synthetic encounter after the intake path test. User verifies the receipt remains visible, has revoked_at, and further intake is blocked."
+          },
           "response": []
         },
         {
-          "name": "A-02 POST /auth/logout — run last",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/auth/logout", "description": "Run last. User then re-runs A-03 with the same token and records the expected unauthorised result, then logs in again for later slices." },
+          "name": "A-02 POST /auth/logout \u2014 run last",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/auth/logout",
+            "description": "Run last. User then re-runs A-03 with the same token and records the expected unauthorised result, then logs in again for later slices."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "B2 — Controlled intake (user test gate I-01 to I-04)",
+      "name": "B2 \u2014 Controlled intake (user test gate I-01 to I-04)",
       "item": [
         {
           "name": "I-01 GET /intake/next-question",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/next-question", "description": "User verifies that this first requires consent, then returns the next configured question without AI-generated content." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/next-question",
+            "description": "User verifies that this first requires consent, then returns the next configured question without AI-generated content."
+          },
           "response": []
         },
         {
-          "name": "I-02 POST /intake/responses — chief complaint",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"chief_complaint\",\n  \"value\": \"chest_discomfort\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "User repeats this request only as the pathway permits. Record the fact ID and status; do not infer test success from this collection." },
+          "name": "I-02 POST /intake/responses \u2014 chief complaint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"chief_complaint\",\n  \"value\": \"chest_discomfort\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "User repeats this request only as the pathway permits. Record the fact ID and status; do not infer test success from this collection."
+          },
           "response": []
         },
         {
-          "name": "I-02 POST /intake/responses — onset/duration",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"onset_duration\",\n  \"value\": \"started_today\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Run only after I-01 confirms onset_duration is next. The value must be one of the server-returned controlled choices." },
+          "name": "I-02 POST /intake/responses \u2014 onset/duration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"onset_duration\",\n  \"value\": \"started_today\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Run only after I-01 confirms onset_duration is next. The value must be one of the server-returned controlled choices."
+          },
           "response": []
         },
         {
-          "name": "I-02 POST /intake/responses — breathlessness",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"breathlessness\",\n  \"value\": \"yes\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "This is the positive red-flag fixture. B2 only verifies sequence/fact persistence; B3 verifies the triage result." },
+          "name": "I-02 POST /intake/responses \u2014 breathlessness",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"breathlessness\",\n  \"value\": \"yes\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "This is the positive red-flag fixture. B2 only verifies sequence/fact persistence; B3 verifies the triage result."
+          },
           "response": []
         },
         {
-          "name": "I-02 POST /intake/responses — sweating",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"sweating\",\n  \"value\": \"no\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Optional configured question. Run it because it is currently the exact next question in the chest-discomfort path." },
+          "name": "I-02 POST /intake/responses \u2014 sweating",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"sweating\",\n  \"value\": \"no\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Optional configured question. Run it because it is currently the exact next question in the chest-discomfort path."
+          },
           "response": []
         },
         {
-          "name": "I-02 POST /intake/responses — allergies",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"allergies\",\n  \"value\": \"no_known_allergies\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. Use the exact controlled value returned by next-question." },
+          "name": "I-02 POST /intake/responses \u2014 allergies",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"allergies\",\n  \"value\": \"no_known_allergies\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required history question. Use the exact controlled value returned by next-question."
+          },
           "response": []
         },
         {
-          "name": "I-02 POST /intake/responses — current medications",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"current_medications\",\n  \"value\": \"no_current_medicines\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required history question. I-01 should return null after this response for the configured pathway." },
+          "name": "I-02 POST /intake/responses \u2014 current medications",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"current_medications\",\n  \"value\": \"no_current_medicines\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required history question. I-01 should return null after this response for the configured pathway."
+          },
           "response": []
         },
         {
           "name": "I-03 GET /facts",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/facts", "description": "User verifies fact source, value, and verification status match the submitted answer." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/facts",
+            "description": "User verifies fact source, value, and verification status match the submitted answer."
+          },
           "response": []
         },
         {
           "name": "I-04 POST /submit",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/submit", "description": "User first verifies a missing-field rejection, completes all required questions through I-01/I-02, then verifies final submission." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/submit",
+            "description": "User first verifies a missing-field rejection, completes all required questions through I-01/I-02, then verifies final submission."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "PTH — Fever, headache, abdominal-pain pathways (user test gate PTH-01 to PTH-05)",
+      "name": "PTH \u2014 Fever, headache, abdominal-pain pathways (user test gate PTH-01 to PTH-05)",
       "item": [
         {
-          "name": "PTH-01 POST /encounters — create fever pathway",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Fever Patient\", \"birth_year\": 1990, \"sex\": \"female\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"fever-v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Set encounter_id and kiosk_session_token manually from this response, then use C-01 to grant clinical_intake consent. Expected question order: chief_complaint=fever, onset_duration, measured_temperature (optional), chills, fever_associated_symptoms (optional), allergies, current_medications. Use the B2 response request format for each next-question result; only required fields block submit. No new automated red flag is expected." },
+          "name": "PTH-01 POST /encounters \u2014 create fever pathway",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Fever Patient\", \"birth_year\": 1990, \"sex\": \"female\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"fever-v1\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters",
+            "description": "Set encounter_id and kiosk_session_token manually from this response, then use C-01 to grant clinical_intake consent. Expected question order: chief_complaint=fever, onset_duration, measured_temperature (optional), chills, fever_associated_symptoms (optional), allergies, current_medications. Use the B2 response request format for each next-question result; only required fields block submit. No new automated red flag is expected."
+          },
           "response": []
         },
         {
-          "name": "PTH-02 POST /encounters — create headache pathway",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Headache Patient\", \"birth_year\": 1986, \"sex\": \"male\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"headache-v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Grant consent before calling next-question. Expected required sequence: chief_complaint=headache, onset_duration, headache_location, headache_severity (mild|moderate|severe|not_sure), vision_changes=yes|no, allergies, current_medications. Confirm invalid choice and out-of-sequence responses are rejected, then submit and inspect the created facts." },
+          "name": "PTH-02 POST /encounters \u2014 create headache pathway",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Headache Patient\", \"birth_year\": 1986, \"sex\": \"male\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"headache-v1\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters",
+            "description": "Grant consent before calling next-question. Expected required sequence: chief_complaint=headache, onset_duration, headache_location, headache_severity (mild|moderate|severe|not_sure), vision_changes=yes|no, allergies, current_medications. Confirm invalid choice and out-of-sequence responses are rejected, then submit and inspect the created facts."
+          },
           "response": []
         },
         {
-          "name": "PTH-03 POST /encounters — create abdominal-pain pathway",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Abdominal Pain Patient\", \"birth_year\": 1978, \"sex\": \"female\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"abdominal-pain-v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "Grant consent before calling next-question. Expected required sequence: chief_complaint=abdominal_pain, onset_duration, abdominal_pain_location, abdominal_pain_severity (mild|moderate|severe|not_sure), nausea_or_vomiting=yes|no, allergies, current_medications. bowel_or_urinary_changes is optional. Confirm submit rejects missing required fields and no unapproved automated red flag is created." },
+          "name": "PTH-03 POST /encounters \u2014 create abdominal-pain pathway",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient\": {\"display_name\": \"Synthetic Abdominal Pain Patient\", \"birth_year\": 1978, \"sex\": \"female\", \"preferred_language\": \"en\"},\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"abdominal-pain-v1\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters",
+            "description": "Grant consent before calling next-question. Expected required sequence: chief_complaint=abdominal_pain, onset_duration, abdominal_pain_location, abdominal_pain_severity (mild|moderate|severe|not_sure), nausea_or_vomiting=yes|no, allergies, current_medications. bowel_or_urinary_changes is optional. Confirm submit rejects missing required fields and no unapproved automated red flag is created."
+          },
           "response": []
         },
         {
-          "name": "PTH-04 POST /summary/generations — pathway summary",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "After completing one additional pathway, verify the draft contains only saved values: chief_complaint, onset_duration, allergies, current_medications, and the pathway-specific fields under associated_symptoms. It must not diagnose, prescribe, or invent missing details." },
+          "name": "PTH-04 POST /summary/generations \u2014 pathway summary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations",
+            "description": "After completing one additional pathway, verify the draft contains only saved values: chief_complaint, onset_duration, allergies, current_medications, and the pathway-specific fields under associated_symptoms. It must not diagnose, prescribe, or invent missing details."
+          },
           "response": []
         },
         {
           "name": "PTH-05 Role-boundary API check",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}", "description": "Physician/admin verifies the clinician view for any pathway. Then verify kiosk access is denied for this endpoint, triage queue, summary edit/verification, document review/timeline, and FHIR export. A triage-role token may read /triage/queue and acknowledge a red flag but cannot edit/verify a summary or export FHIR." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}",
+            "description": "Physician/admin verifies the clinician view for any pathway. Then verify kiosk access is denied for this endpoint, triage queue, summary edit/verification, document review/timeline, and FHIR export. A triage-role token may read /triage/queue and acknowledge a red flag but cannot edit/verify a summary or export FHIR."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "B3 — Safety and clinician review (user test gate T/R)",
+      "name": "B3 \u2014 Safety and clinician review (user test gate T/R)",
       "item": [
         {
-          "name": "T-01 GET /triage/queue — positive safety fixture",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/triage/queue", "description": "Prerequisite: use a fresh synthetic encounter and submit chest_discomfort followed by breathlessness=yes through B2. User verifies exactly one urgent-review item for the encounter, rule_id chest-discomfort-with-breathlessness, non-diagnostic wording, and evidence fact IDs." },
+          "name": "T-01 GET /triage/queue \u2014 positive safety fixture",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/triage/queue",
+            "description": "Prerequisite: use a fresh synthetic encounter and submit chest_discomfort followed by breathlessness=yes through B2. User verifies exactly one urgent-review item for the encounter, rule_id chest-discomfort-with-breathlessness, non-diagnostic wording, and evidence fact IDs."
+          },
           "response": []
         },
         {
           "name": "T-02 POST /red-flags/{red_flag_id}/acknowledgements",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"note\": \"Synthetic demo acknowledgement\"\n}" }, "url": "{{base_url}}{{api_prefix}}/red-flags/{{red_flag_id}}/acknowledgements", "description": "Set red_flag_id from T-01. User verifies acknowledged_by/acknowledged_at are populated while active, rule_id, severity, reason, and evidence_fact_ids remain intact. Repeat is idempotent." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Synthetic demo acknowledgement\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/red-flags/{{red_flag_id}}/acknowledgements",
+            "description": "Set red_flag_id from T-01. User verifies acknowledged_by/acknowledged_at are populated while active, rule_id, severity, reason, and evidence_fact_ids remain intact. Repeat is idempotent."
+          },
           "response": []
         },
         {
           "name": "R-01 GET /clinician/encounters/{encounter_id}",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}", "description": "User verifies staff-only access and a coherent clinician view: encounter state, structured facts, active red flag with evidence, documents, and latest summary. Kiosk token must be denied." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/clinician/encounters/{{encounter_id}}",
+            "description": "User verifies staff-only access and a coherent clinician view: encounter state, structured facts, active red flag with evidence, documents, and latest summary. Kiosk token must be denied."
+          },
+          "response": []
+        },
+        {
+          "name": "T-03 GET /triage/encounters \u2014 all encounters list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response is an array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(Array.isArray(jsonData)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_prefix}}/triage/encounters",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "{{api_prefix}}",
+                "triage",
+                "encounters"
+              ]
+            },
+            "description": "Retrieve all recent encounters for the triage/admin dashboard with patient demographics and active red flag counts."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "B4 — Documents (user test gate D-01 to D-03)",
+      "name": "B4 \u2014 Documents (user test gate D-01 to D-03)",
       "item": [
         {
           "name": "D-01 POST /documents upload",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "document_type", "value": "lab_report", "type": "text" }, { "key": "file", "type": "file", "src": "SET_A_SYNTHETIC_PDF_OR_IMAGE" }] }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents", "description": "User supplies a valid synthetic PDF/JPEG/PNG smaller than the configured limit and with matching file content. The file must land in the configured private Azure Blob container; record document_id manually. Also verify missing/revoked consent and mismatched MIME/content are rejected." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "document_type",
+                  "value": "lab_report",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "SET_A_SYNTHETIC_PDF_OR_IMAGE"
+                }
+              ]
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents",
+            "description": "User supplies a valid synthetic PDF/JPEG/PNG smaller than the configured limit and with matching file content. The file must land in the configured private Azure Blob container; record document_id manually. Also verify missing/revoked consent and mismatched MIME/content are rejected."
+          },
           "response": []
         },
         {
           "name": "D-02 GET /encounter documents",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents", "description": "User verifies only this encounter's document metadata and processing state are listed." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/documents",
+            "description": "User verifies only this encounter's document metadata and processing state are listed."
+          },
           "response": []
         },
         {
           "name": "D-03 GET /documents/{document_id}",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}", "description": "User verifies authorised metadata retrieval and separately checks unauthorised access is denied." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}",
+            "description": "User verifies authorised metadata retrieval and separately checks unauthorised access is denied."
+          },
           "response": []
         },
         {
           "name": "D-04 GET /documents/{document_id}/content",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/content", "description": "User verifies the authorised original synthetic source file streams from private Azure Blob Storage with its declared content type. A different encounter token must be denied; missing stored content must return a safe not-found response." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/content",
+            "description": "User verifies the authorised original synthetic source file streams from private Azure Blob Storage with its declared content type. A different encounter token must be denied; missing stored content must return a safe not-found response."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "B5 — Summary and physician verification (user test gate S-01 to S-04)",
+      "name": "B5 \u2014 Summary and physician verification (user test gate S-01 to S-04)",
       "item": [
         {
           "name": "S-01 POST /summary/generations",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations", "description": "Server prerequisite: LLM_BASE_URL and LLM_API_KEY are present only in backend/.env; never put them in Postman. Expected configured-provider result: source=openai_compatible, prompt_version=openai-compatible-summary-v1, prompt_metadata with prompt ID/version/SHA-256, and gpt-5.6-luna receives no temperature/max_tokens parameters. Expected degraded result: source=template_fallback. User checks that uncaptured facts are Not captured rather than invented." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/generations",
+            "description": "Server prerequisite: LLM_BASE_URL and LLM_API_KEY are present only in backend/.env; never put them in Postman. Expected configured-provider result: source=openai_compatible, prompt_version=openai-compatible-summary-v1, prompt_metadata with prompt ID/version/SHA-256, and gpt-5.6-luna receives no temperature/max_tokens parameters. Expected degraded result: source=template_fallback. User checks that uncaptured facts are Not captured rather than invented."
+          },
           "response": []
         },
         {
           "name": "S-02 GET /summary",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary", "description": "User verifies the current draft and role restrictions." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary",
+            "description": "User verifies the current draft and role restrictions."
+          },
           "response": []
         },
         {
           "name": "S-03 PATCH /summary",
-          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"text\": \"Clinician-edited synthetic summary.\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary", "description": "User verifies physician-only edit and persistence through S-02." },
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Clinician-edited synthetic summary.\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary",
+            "description": "User verifies physician-only edit and persistence through S-02."
+          },
           "response": []
         },
         {
           "name": "S-04 POST /summary/verifications",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"decision\": \"accept\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/verifications", "description": "User verifies explicit accept/reject behavior and encounter verification state." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"accept\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/summary/verifications",
+            "description": "User verifies explicit accept/reject behavior and encounter verification state."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "AYUSH — Dashavidha intake (user test gate AYU-01 to AYU-05)",
+      "name": "AYUSH \u2014 Dashavidha intake (user test gate AYU-01 to AYU-05)",
       "item": [
         {
-          "name": "AYU-01 POST /encounters — create AYUSH encounter",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"patient\": {\n    \"display_name\": \"Synthetic AYUSH Patient\",\n    \"birth_year\": 1988,\n    \"sex\": \"female\",\n    \"preferred_language\": \"en\"\n  },\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"ayush-dashavidha-v1\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters", "description": "User confirms the returned pathway_version is ayush-dashavidha-v1, then manually replaces encounter_id and kiosk_session_token with this response's values. Also submit an unknown pathway_version separately and confirm a safe 422 response." },
+          "name": "AYU-01 POST /encounters \u2014 create AYUSH encounter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient\": {\n    \"display_name\": \"Synthetic AYUSH Patient\",\n    \"birth_year\": 1988,\n    \"sex\": \"female\",\n    \"preferred_language\": \"en\"\n  },\n  \"mode\": \"kiosk\",\n  \"pathway_version\": \"ayush-dashavidha-v1\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters",
+            "description": "User confirms the returned pathway_version is ayush-dashavidha-v1, then manually replaces encounter_id and kiosk_session_token with this response's values. Also submit an unknown pathway_version separately and confirm a safe 422 response."
+          },
           "response": []
         },
         {
-          "name": "AYU-02 POST /consents — grant AYUSH intake consent",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"consent_type\": \"clinical_intake\",\n  \"version\": \"ayush-v1\",\n  \"language\": \"en\",\n  \"granted\": true\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents", "description": "User confirms active consent is required before the AYUSH questions are available." },
+          "name": "AYU-02 POST /consents \u2014 grant AYUSH intake consent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consent_type\": \"clinical_intake\",\n  \"version\": \"ayush-v1\",\n  \"language\": \"en\",\n  \"granted\": true\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/consents",
+            "description": "User confirms active consent is required before the AYUSH questions are available."
+          },
           "response": []
         },
         {
-          "name": "AYU-03 GET /intake/next-question — Dashavidha start",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/next-question", "description": "User verifies the first configured question is ayush_prakriti and that the response identifies ayush-dashavidha-v1. Run before every response if checking the enforced sequence." },
+          "name": "AYU-03 GET /intake/next-question \u2014 Dashavidha start",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/next-question",
+            "description": "User verifies the first configured question is ayush_prakriti and that the response identifies ayush-dashavidha-v1. Run before every response if checking the enforced sequence."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Prakriti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_prakriti\",\n  \"value\": \"mixed\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled, synthetic patient-reported example only; not a diagnosis." },
+          "name": "AYU-04 POST /intake/responses \u2014 Prakriti",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_prakriti\",\n  \"value\": \"mixed\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Controlled, synthetic patient-reported example only; not a diagnosis."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Vikriti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vikriti\",\n  \"value\": \"sleep_or_energy_change\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required controlled Dashavidha context, saved as a patient-confirmed clinical fact." },
+          "name": "AYU-04 POST /intake/responses \u2014 Vikriti",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_vikriti\",\n  \"value\": \"sleep_or_energy_change\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required controlled Dashavidha context, saved as a patient-confirmed clinical fact."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Sara",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_sara\",\n  \"value\": \"not_sure\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Optional controlled field retained for the configured sequence." },
+          "name": "AYU-04 POST /intake/responses \u2014 Sara",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_sara\",\n  \"value\": \"not_sure\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Optional controlled field retained for the configured sequence."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Samhanana",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_samhanana\",\n  \"value\": \"medium\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
+          "name": "AYU-04 POST /intake/responses \u2014 Samhanana",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_samhanana\",\n  \"value\": \"medium\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Controlled synthetic patient-reported context only."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Pramana",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_pramana\",\n  \"value\": \"no\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
+          "name": "AYU-04 POST /intake/responses \u2014 Pramana",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_pramana\",\n  \"value\": \"no\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Controlled synthetic patient-reported context only."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Satmya",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_satmya\",\n  \"value\": \"regular_routine\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
+          "name": "AYU-04 POST /intake/responses \u2014 Satmya",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_satmya\",\n  \"value\": \"regular_routine\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Controlled synthetic patient-reported context only."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Sattva",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_sattva\",\n  \"value\": \"sometimes_stressed\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
+          "name": "AYU-04 POST /intake/responses \u2014 Sattva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_sattva\",\n  \"value\": \"sometimes_stressed\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Controlled synthetic patient-reported context only."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Ahara Shakti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_ahara_shakti\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
+          "name": "AYU-04 POST /intake/responses \u2014 Ahara Shakti",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_ahara_shakti\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Controlled synthetic patient-reported context only."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Vyayama Shakti",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vyayama_shakti\",\n  \"value\": \"moderate\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Controlled synthetic patient-reported context only." },
+          "name": "AYU-04 POST /intake/responses \u2014 Vyayama Shakti",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_vyayama_shakti\",\n  \"value\": \"moderate\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Controlled synthetic patient-reported context only."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Vaya",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vaya\",\n  \"value\": \"adult\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required single-choice field. Submit an invalid value separately to confirm allowed-choice enforcement." },
+          "name": "AYU-04 POST /intake/responses \u2014 Vaya",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_vaya\",\n  \"value\": \"adult\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required single-choice field. Submit an invalid value separately to confirm allowed-choice enforcement."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Ahara",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_ahara\",\n  \"value\": \"mostly_home_cooked\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required controlled dietary context." },
+          "name": "AYU-04 POST /intake/responses \u2014 Ahara",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_ahara\",\n  \"value\": \"mostly_home_cooked\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required controlled dietary context."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Vihara",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_vihara\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required controlled routine context." },
+          "name": "AYU-04 POST /intake/responses \u2014 Vihara",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_vihara\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required controlled routine context."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Agni",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_agni\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required configured single-choice digestion context; not a diagnosis." },
+          "name": "AYU-04 POST /intake/responses \u2014 Agni",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_agni\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required configured single-choice digestion context; not a diagnosis."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Koshtha",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_koshtha\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Required configured single-choice bowel-pattern context; not a diagnosis." },
+          "name": "AYU-04 POST /intake/responses \u2014 Koshtha",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_koshtha\",\n  \"value\": \"regular\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Required configured single-choice bowel-pattern context; not a diagnosis."
+          },
           "response": []
         },
         {
-          "name": "AYU-04 POST /intake/responses — Nidana",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"question_key\": \"ayush_nidana\",\n  \"value\": \"stress\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}" }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses", "description": "Final required controlled AYUSH field. User verifies next-question returns null after this response." },
+          "name": "AYU-04 POST /intake/responses \u2014 Nidana",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_key\": \"ayush_nidana\",\n  \"value\": \"stress\",\n  \"input_mode\": \"touch\",\n  \"language\": \"en\"\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/intake/responses",
+            "description": "Final required controlled AYUSH field. User verifies next-question returns null after this response."
+          },
           "response": []
         },
         {
           "name": "AYU-05 GET /facts and POST /submit",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/facts", "description": "User verifies each ayush_* response became a patient-confirmed, evidence-linked fact. Then use B2 I-04 POST /submit for this same encounter: it must reject while a required AYUSH field is missing and succeed once complete. Optionally use B5 S-01 on this encounter and verify ayush_assessment is the only captured clinical content." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/facts",
+            "description": "User verifies each ayush_* response became a patient-confirmed, evidence-linked fact. Then use B2 I-04 POST /submit for this same encounter: it must reject while a required AYUSH field is missing and succeed once complete. Optionally use B5 S-01 on this encounter and verify ayush_assessment is the only captured clinical content."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "INT — Assistive adapter contracts (user test gate INT-01 to INT-08)",
+      "name": "INT \u2014 Assistive adapter contracts (user test gate INT-01 to INT-08)",
       "item": [
         {
-          "name": "INT-01 POST /speech/transcriptions — OpenAI-compatible STT",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "language", "value": "en", "type": "text" }, { "key": "audio", "type": "file", "src": "SET_A_SYNTHETIC_WAV_FILE" }] }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/speech/transcriptions", "description": "Server prerequisite: LLM_BASE_URL points to the Azure OpenAI-compatible /openai/v1 endpoint, LLM_API_KEY is valid for it, SPEECH_ADAPTER_MODE=openai_compatible, and AZURE_OPENAI_STT_DEPLOYMENT is the deployed gpt-4o-mini-transcribe name. Rebuild the API. Use synthetic WAV only. User verifies provider=openai_compatible, status=COMPLETED, transcript/language, and that this request creates no patient response or clinical fact." },
+          "name": "INT-01 POST /speech/transcriptions \u2014 OpenAI-compatible STT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "language",
+                  "value": "en",
+                  "type": "text"
+                },
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": "SET_A_SYNTHETIC_WAV_FILE"
+                }
+              ]
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/speech/transcriptions",
+            "description": "Server prerequisite: LLM_BASE_URL points to the Azure OpenAI-compatible /openai/v1 endpoint, LLM_API_KEY is valid for it, SPEECH_ADAPTER_MODE=openai_compatible, and AZURE_OPENAI_STT_DEPLOYMENT is the deployed gpt-4o-mini-transcribe name. Rebuild the API. Use synthetic WAV only. User verifies provider=openai_compatible, status=COMPLETED, transcript/language, and that this request creates no patient response or clinical fact."
+          },
           "response": []
         },
         {
-          "name": "INT-02 POST /documents/{document_id}/extractions — Luna vision",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions", "description": "Prerequisite: document_id is a synthetic JPEG/PNG B4 upload for this encounter. Set OCR_ADAPTER_MODE=openai_compatible; LLM_BASE_URL/LLM_API_KEY and LLM_MODEL=gpt-5.6-luna are reused through AsyncOpenAI. Rebuild. User verifies provider=openai_compatible_vision, document provenance, extracted text, entities, requires_clinician_verification=true, and no clinical fact." },
+          "name": "INT-02 POST /documents/{document_id}/extractions \u2014 Luna vision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions",
+            "description": "Prerequisite: document_id is a synthetic JPEG/PNG B4 upload for this encounter. Set OCR_ADAPTER_MODE=openai_compatible; LLM_BASE_URL/LLM_API_KEY and LLM_MODEL=gpt-5.6-luna are reused through AsyncOpenAI. Rebuild. User verifies provider=openai_compatible_vision, document provenance, extracted text, entities, requires_clinician_verification=true, and no clinical fact."
+          },
           "response": []
         },
         {
           "name": "INT-03 GET /documents/{document_id}/extractions/latest",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions/latest", "description": "User verifies the latest extraction is scoped to the document's encounter. A different encounter token must be denied." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions/latest",
+            "description": "User verifies the latest extraction is scoped to the document's encounter. A different encounter token must be denied."
+          },
           "response": []
         },
         {
-          "name": "INT-04 POST /speech/transcriptions — disabled fallback",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "language", "value": "en", "type": "text" }, { "key": "fixture_id", "value": "en_general_v1", "type": "text" }, { "key": "audio", "type": "file", "src": "SET_A_SYNTHETIC_WAV_FILE" }] }, "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/speech/transcriptions", "description": "Set SPEECH_ADAPTER_MODE=disabled, rebuild, and run this request. User verifies a safe 503 with speech_adapter_unavailable, no saved artifact/fact/response, and uses touch intake as the fallback. Restore mock mode only if needed for the earlier request." },
+          "name": "INT-04 POST /speech/transcriptions \u2014 disabled fallback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "language",
+                  "value": "en",
+                  "type": "text"
+                },
+                {
+                  "key": "fixture_id",
+                  "value": "en_general_v1",
+                  "type": "text"
+                },
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": "SET_A_SYNTHETIC_WAV_FILE"
+                }
+              ]
+            },
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/speech/transcriptions",
+            "description": "Set SPEECH_ADAPTER_MODE=disabled, rebuild, and run this request. User verifies a safe 503 with speech_adapter_unavailable, no saved artifact/fact/response, and uses touch intake as the fallback. Restore mock mode only if needed for the earlier request."
+          },
           "response": []
         },
         {
-          "name": "INT-05 POST /audio/prompts/next-question — OpenAI-compatible TTS",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/audio/prompts/next-question", "description": "Prerequisite: the same direct AsyncOpenAI settings as INT-01, plus AZURE_OPENAI_TTS_DEPLOYMENT set to the deployed gpt-4o-mini-tts name. User verifies a WAV response and X-MediKiosk-Question-Key matching the server-configured next question. The endpoint must not accept arbitrary text or generate speech from a summary." },
+          "name": "INT-05 POST /audio/prompts/next-question \u2014 OpenAI-compatible TTS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/audio/prompts/next-question",
+            "description": "Prerequisite: the same direct AsyncOpenAI settings as INT-01, plus AZURE_OPENAI_TTS_DEPLOYMENT set to the deployed gpt-4o-mini-tts name. User verifies a WAV response and X-MediKiosk-Question-Key matching the server-configured next question. The endpoint must not accept arbitrary text or generate speech from a summary."
+          },
           "response": []
         },
         {
-          "name": "INT-06 POST /documents/{document_id}/extractions — PDF PyMuPDF + Luna",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{kiosk_session_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions", "description": "Prerequisite: document_id is a synthetic PDF B4 upload and OCR_ADAPTER_MODE=openai_compatible. Rebuild after installing PyMuPDF. The server reads native PDF text, renders each page as PNG, then calls Luna per page. Verify provider=pymupdf_luna_vision, structured_data.document_kind=pdf, native_text, page_count, page_numbered pages, requires_clinician_verification=true, and no clinical fact. Record extraction_id." },
+          "name": "INT-06 POST /documents/{document_id}/extractions \u2014 PDF PyMuPDF + Luna",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kiosk_session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions",
+            "description": "Prerequisite: document_id is a synthetic PDF B4 upload and OCR_ADAPTER_MODE=openai_compatible. Rebuild after installing PyMuPDF. The server reads native PDF text, renders each page as PNG, then calls Luna per page. Verify provider=pymupdf_luna_vision, structured_data.document_kind=pdf, native_text, page_count, page_numbered pages, requires_clinician_verification=true, and no clinical fact. Record extraction_id."
+          },
           "response": []
         },
         {
           "name": "INT-07 POST /document extraction review",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"decision\": \"corrected\",\n  \"note\": \"Physician reviewed synthetic page 1.\",\n  \"promoted_facts\": [\n    {\n      \"fact_type\": \"document_lab_result\",\n      \"value\": {\"test_name\": \"Haemoglobin\", \"value\": \"13.2\", \"unit\": \"g/dL\"},\n      \"source_excerpt\": \"Haemoglobin: 13.2 g/dL\",\n      \"page_number\": 1\n    }\n  ]\n}" }, "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions/{{extraction_id}}/reviews", "description": "Physician/admin only. Verify accept, correct, and reject decisions. This request promotes only the explicitly supplied reviewed fact. A rejected review with promoted_facts must return 422. Record review id and confirm the fact has clinician_verified status via GET /facts." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"corrected\",\n  \"note\": \"Physician reviewed synthetic page 1.\",\n  \"promoted_facts\": [\n    {\n      \"fact_type\": \"document_lab_result\",\n      \"value\": {\"test_name\": \"Haemoglobin\", \"value\": \"13.2\", \"unit\": \"g/dL\"},\n      \"source_excerpt\": \"Haemoglobin: 13.2 g/dL\",\n      \"page_number\": 1\n    }\n  ]\n}"
+            },
+            "url": "{{base_url}}{{api_prefix}}/documents/{{document_id}}/extractions/{{extraction_id}}/reviews",
+            "description": "Physician/admin only. Verify accept, correct, and reject decisions. This request promotes only the explicitly supplied reviewed fact. A rejected review with promoted_facts must return 422. Record review id and confirm the fact has clinician_verified status via GET /facts."
+          },
           "response": []
         },
         {
           "name": "INT-08 GET /document timeline",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/document-timeline", "description": "Physician/admin only. Verify chronological upload, extraction, review, and verified_fact entries with document/page evidence metadata. It is evidence history, not an AI-generated narrative. A kiosk token must receive 403." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/document-timeline",
+            "description": "Physician/admin only. Verify chronological upload, extraction, review, and verified_fact entries with document/page evidence metadata. It is evidence history, not an AI-generated narrative. A kiosk token must receive 403."
+          },
           "response": []
         }
       ]
     },
     {
-      "name": "B6 — FHIR export (user test gate F-01 to F-02)",
+      "name": "B6 \u2014 FHIR export (user test gate F-01 to F-02)",
       "item": [
         {
           "name": "F-01 POST /fhir/exports",
-          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/fhir/exports", "description": "User verifies the local structural validation result and records export_id manually. This is not a live ABDM claim." },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/fhir/exports",
+            "description": "User verifies the local structural validation result and records export_id manually. This is not a live ABDM claim."
+          },
           "response": []
         },
         {
           "name": "F-02 GET /fhir/exports/{export_id}",
-          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staff_access_token}}" }], "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/fhir/exports/{{export_id}}", "description": "User verifies retrieval is scoped to the same encounter and staff role." },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_access_token}}"
+              }
+            ],
+            "url": "{{base_url}}{{api_prefix}}/encounters/{{encounter_id}}/fhir/exports/{{export_id}}",
+            "description": "User verifies retrieval is scoped to the same encounter and staff role."
+          },
           "response": []
         }
       ]

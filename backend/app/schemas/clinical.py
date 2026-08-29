@@ -38,6 +38,8 @@ class EncounterListItem(BaseModel):
     patient_birth_year: int | None
     patient_sex: str | None
     patient_abha_identifier: str | None = None
+    patient_respondent_type: str | None = None
+    patient_caregiver_relationship: str | None = None
     has_active_red_flag: bool
     created_at: datetime
     submitted_at: datetime | None
@@ -45,6 +47,7 @@ class EncounterListItem(BaseModel):
 
 class ClinicianEncounterResponse(BaseModel):
     encounter: "EncounterResponse"
+    patient: "PatientInput | None" = None
     facts: list["FactResponse"]
     red_flags: list[RedFlagResponse]
     documents: list["DocumentResponse"]
@@ -52,7 +55,7 @@ class ClinicianEncounterResponse(BaseModel):
 
 
 from app.schemas.documents import DocumentResponse  # noqa: E402
-from app.schemas.encounters import EncounterResponse  # noqa: E402
+from app.schemas.encounters import EncounterResponse, PatientInput  # noqa: E402
 from app.schemas.intake import FactResponse  # noqa: E402
 from app.schemas.summaries import SummaryResponse  # noqa: E402
 

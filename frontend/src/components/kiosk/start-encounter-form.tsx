@@ -22,6 +22,8 @@ export function StartEncounterForm() {
   const router = useRouter();
   const [pathway, setPathway] = useState<Pathway>("chest-discomfort-v1");
   const [language, setLanguage] = useState<KioskLanguage>("en");
+  const [respondentType, setRespondentType] = useState<"patient" | "caregiver">("patient");
+  const [caregiverRelationship, setCaregiverRelationship] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [sex, setSex] = useState("");
@@ -42,6 +44,7 @@ export function StartEncounterForm() {
     setSex("male");
     setAbhaId("91-8472-1928-3011@abdm");
     setLanguage("hi");
+    setRespondentType("patient");
     setShowAbhaScan(false);
   }
 
@@ -56,6 +59,8 @@ export function StartEncounterForm() {
         birthYear: birthYear ? Number.parseInt(birthYear, 10) : undefined,
         sex: sex || undefined,
         abhaIdentifier: abhaId.trim() || undefined,
+        respondentType,
+        caregiverRelationship: respondentType === "caregiver" ? (caregiverRelationship || "Attendant") : undefined,
       });
       sessionStorage.setItem("medikiosk.kiosk_token", result.kiosk_session_token);
       sessionStorage.setItem("medikiosk.language", language);
@@ -96,6 +101,52 @@ export function StartEncounterForm() {
           <div className="kiosk-privacy-strip">
             <strong>{text("English + Hindi patient flow", "अंग्रेज़ी + हिंदी मरीज प्रवाह")}</strong>
             <span>{text("Large touch choices, spoken guidance, and a private auto-reset.", "बड़े टच विकल्प, बोलकर मार्गदर्शन और निजी ऑटो-रीसेट।")}</span>
+          </div>
+
+          {/* Caregiver / Attendant Proxy Mode Selection */}
+          <div style={{ margin: "1.25rem 0", padding: "1rem", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+            <p style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: "600" }}>
+              {text("Who is completing this intake?", "यह जानकारी कौन दर्ज कर रहा है?")}
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+              <button
+                type="button"
+                className={`choice ${respondentType === "patient" ? "selected" : ""}`}
+                onClick={() => { setRespondentType("patient"); setCaregiverRelationship(""); }}
+                style={{ padding: "0.75rem", textAlign: "center" }}
+              >
+                <strong>👤 {text("Patient (Self)", "मरीज (स्वयं)")}</strong>
+              </button>
+              <button
+                type="button"
+                className={`choice ${respondentType === "caregiver" ? "selected" : ""}`}
+                onClick={() => { setRespondentType("caregiver"); if (!caregiverRelationship) setCaregiverRelationship("Son / Daughter"); }}
+                style={{ padding: "0.75rem", textAlign: "center" }}
+              >
+                <strong>👥 {text("Attendant / Relative", "परिचारक / परिजन")}</strong>
+              </button>
+            </div>
+
+            {respondentType === "caregiver" && (
+              <div style={{ marginTop: "0.75rem" }}>
+                <small style={{ display: "block", marginBottom: "0.4rem", opacity: 0.85 }}>
+                  {text("Relationship to patient:", "मरीज से संबंध:")}
+                </small>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                  {["Son / Daughter", "Spouse", "Parent", "Sibling", "Relative", "Hospital Volunteer"].map((rel) => (
+                    <button
+                      key={rel}
+                      type="button"
+                      className={`choice ${caregiverRelationship === rel ? "selected" : ""}`}
+                      onClick={() => setCaregiverRelationship(rel)}
+                      style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem" }}
+                    >
+                      {rel}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="abha-card">

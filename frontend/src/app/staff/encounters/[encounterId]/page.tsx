@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
   ClinicianEncounter,
@@ -27,6 +27,7 @@ import {
   DocumentTimelineItem,
   DocumentMetadata,
 } from "@/lib/api";
+import { evaluateEncounterAbnormalities } from "@/lib/clinical-eval";
 
 export default function StaffEncounterPage() {
   const { encounterId } = useParams<{ encounterId: string }>();
@@ -42,6 +43,11 @@ export default function StaffEncounterPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const clinicalAbnormalities = useMemo(() => {
+    if (!record) return { labAlerts: [], drugAlerts: [], hasUrgentFindings: false };
+    return evaluateEncounterAbnormalities(record.facts, record.documents, timeline);
+  }, [record, timeline]);
 
   const loadRecord = useCallback(async () => {
     const token = sessionStorage.getItem("medikiosk.staff_token");
@@ -295,7 +301,10 @@ export default function StaffEncounterPage() {
                     Pathway: <strong>{record.encounter.pathway_version}</strong> · Status: <span className="tag">{record.encounter.status}</span>
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <button className="button-secondary" onClick={() => window.print()} type="button">
+                    🖨️ Print OPD Case Sheet
+                  </button>
                   <button className="button-primary" disabled={actionLoading === "summary"} onClick={handleGenerateSummary} type="button">
                     {actionLoading === "summary" ? "Synthesizing with AI…" : summary ? "🔄 Re-generate AI summary" : "✨ Generate AI summary"}
                   </button>
@@ -304,6 +313,89 @@ export default function StaffEncounterPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Patient Demographics & Caregiver Provenance Banner */}
+              {record.patient && (
+                <div style={{ marginTop: "1rem", padding: "0.85rem 1.25rem", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border, #2a3342)", display: "flex", flexWrap: "wrap", gap: "1.5rem", alignItems: "center" }}>
+                  <div>
+                    <small style={{ display: "block", opacity: 0.7 }}>Patient Name</small>
+                    <strong>{record.patient.display_name || "Anonymous Patient"}</strong>
+                  </div>
+                  <div>
+                    <small style={{ display: "block", opacity: 0.7 }}>Demographics</small>
+                    <span>{record.patient.birth_year ? `Born ${record.patient.birth_year}` : ""} {record.patient.sex ? `(${record.patient.sex})` : ""}</span>
+                  </div>
+                  {record.patient.abha_identifier && (
+                    <div>
+                      <small style={{ display: "block", opacity: 0.7 }}>ABHA Address</small>
+                      <code style={{ fontSize: "0.85rem", color: "#60a5fa" }}>{record.patient.abha_identifier}</code>
+                    </div>
+                  )}
+                  <div>
+                    <small style={{ display: "block", opacity: 0.7 }}>Intake Mode & Provenance</small>
+                    <span className="tag">
+                      {record.patient.respondent_type === "caregiver" ? `👥 Caregiver Assisted (${record.patient.caregiver_relationship || "Relative"})` : "👤 Patient Self-Report"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Abnormal Lab Values & Drug Interaction Alerts */}
+              {(clinicalAbnormalities.labAlerts.length > 0 || clinicalAbnormalities.drugAlerts.length > 0) && (
+                <div style={{ marginTop: "1.5rem", padding: "1.25rem", borderRadius: "12px", border: "1px solid #ef4444", background: "rgba(239, 68, 68, 0.05)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                    <h2 className="display" style={{ fontSize: "1.2rem", margin: 0, color: "#f87171" }}>
+                      ⚡ Automated Clinical Lab & Drug Safety Warnings
+                    </h2>
+                    <span className="tag urgent">
+                      {clinicalAbnormalities.labAlerts.length + clinicalAbnormalities.drugAlerts.length} Alert(s)
+                    </span>
+                  </div>
+
+                  {/* Lab alerts */}
+                  {clinicalAbnormalities.labAlerts.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: clinicalAbnormalities.drugAlerts.length ? "1rem" : 0 }}>
+                      <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: "600", opacity: 0.9 }}>Out-of-Range Lab Values (vs Standard Reference Boundaries):</p>
+                      <div className="data-list">
+                        {clinicalAbnormalities.labAlerts.map((alert, idx) => (
+                          <div key={idx} className="data-card" style={{ borderLeft: alert.severity === "urgent" ? "3px solid #ef4444" : "3px solid #f59e0b", padding: "0.75rem 1rem" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                              <div>
+                                <strong style={{ fontSize: "0.95rem" }}>{alert.testName}: <span style={{ color: alert.severity === "urgent" ? "#ef4444" : "#f59e0b" }}>{alert.value}</span></strong>
+                                <span style={{ marginLeft: "0.5rem", fontSize: "0.8rem", opacity: 0.8 }}>(Ref: {alert.referenceRange})</span>
+                              </div>
+                              <span className={`tag ${alert.severity === "urgent" ? "urgent" : ""}`} style={{ fontSize: "0.75rem" }}>
+                                {alert.status.replace("_", " ")}
+                              </span>
+                            </div>
+                            <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: alert.severity === "urgent" ? "#fca5a5" : "#fcd34d" }}>
+                              {alert.interpretation} {alert.sourceDoc ? `• Source: ${alert.sourceDoc}` : ""}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Drug interaction alerts */}
+                  {clinicalAbnormalities.drugAlerts.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: "600", opacity: 0.9 }}>Potential Drug-Drug Interaction Warnings:</p>
+                      <div className="data-list">
+                        {clinicalAbnormalities.drugAlerts.map((drugAlert, idx) => (
+                          <div key={idx} className="data-card" style={{ borderLeft: "3px solid #ef4444", padding: "0.75rem 1rem" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <strong style={{ color: "#f87171" }}>⚠️ {drugAlert.title}</strong>
+                              <span className="tag urgent">{drugAlert.severity}</span>
+                            </div>
+                            <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#e2e8f0" }}>{drugAlert.detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Physician AI Summary Section */}
               <div style={{ marginTop: "2rem", padding: "1.25rem", borderRadius: "12px", border: "1px solid var(--border, #2a3342)", background: "rgba(255,255,255,0.02)" }}>
