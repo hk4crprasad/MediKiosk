@@ -298,9 +298,11 @@ docker compose up --build -d
 cd frontend && npm install && npm run dev
 
 # Access points
-# Kiosk:     http://localhost:3000/kiosk/start
-# Triage:    http://localhost:3000/staff/triage
-# API docs:  http://localhost:8000/api/v1/docs
+# Kiosk:        http://localhost:3000/kiosk/start
+# Triage:       http://localhost:3000/staff/triage
+# OPD Live TV:  http://localhost:3000/staff/display
+# Admin Users:  http://localhost:3000/staff/admin/users
+# API docs:     http://localhost:8000/api/v1/docs
 ```
 
 ### Default Admin Credentials

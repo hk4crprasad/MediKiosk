@@ -29,6 +29,7 @@ import {
 } from "@/lib/api";
 import { evaluateEncounterAbnormalities } from "@/lib/clinical-eval";
 import { evaluateAyushProfile } from "@/lib/ayush-eval";
+import { AbdmExchangeSimulator } from "@/components/common/abdm-exchange-simulator";
 
 export default function StaffEncounterPage() {
   const { encounterId } = useParams<{ encounterId: string }>();
@@ -548,6 +549,9 @@ export default function StaffEncounterPage() {
                   </pre>
                 </div>
               )}
+
+              {/* ABDM Milestone M1-M3 Sandbox Exchange Simulator */}
+              <AbdmExchangeSimulator abhaId={record?.patient?.abha_identifier} encounterId={encounterId} bundleData={fhirExport?.bundle} />
 
               {/* Document metadata inspection card */}
               {selectedDocMeta && (
