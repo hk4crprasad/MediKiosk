@@ -1,0 +1,119 @@
+name: CI/CD Pipeline - Backend
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-cd.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: medikiosk-api
+
+jobs:
+  # ==========================================================
+  # CI: Build & Push Backend Docker Image to GHCR (ubuntu-latest)
+  # ==========================================================
+  ci:
+    name: CI - Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lowercase Repository Owner for GHCR
+        id: repo_owner
+        run: |
+          echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push backend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================================
+  # CD: Deploy Container on Self-Hosted Runner 'SIH'
+  # ==========================================================
+  cd:
+    name: CD - Deploy to SIH Runner
+    needs: ci
+    runs-on: SIH
+
+    steps:
+      - name: Lowercase Repository Owner for GHCR
+        id: repo_owner
+        run: |
+          echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry on Runner
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
+
+      - name: Stop & Remove Old Container (if running)
+        run: |
+          echo "Stopping old container if running..."
+          sudo docker stop ${{ env.IMAGE_NAME }} || true
+          sudo docker rm -f ${{ env.IMAGE_NAME }} || true
+
+      - name: Clean Old Unused Docker Images
+        run: |
+          echo "Pruning unused images..."
+          sudo docker image prune -af
+
+      - name: Clean Docker System
+        run: |
+          echo "Pruning docker system..."
+          sudo docker system prune -af
+
+      - name: Pull Latest Docker Image
+        run: |
+          echo "Pulling latest backend image..."
+          sudo docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Run New Backend Container
+        run: |
+          echo "Starting new container..."
+          sudo docker run -d \
+            --name ${{ env.IMAGE_NAME }} \
+            --restart unless-stopped \
+            -p 8000:8000 \
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Verify Container Health
+        run: |
+          sleep 5
+          sudo docker ps --filter "name=${{ env.IMAGE_NAME }}"
+          echo "Deployment completed successfully on SIH runner!"
