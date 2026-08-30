@@ -15,7 +15,7 @@ type VoiceRecordButtonProps = {
   onTranscript: (transcript: string) => void;
 };
 
-const WAVEFORM_BAR_COUNT = 42;
+const WAVEFORM_BAR_COUNT = 64;
 
 function flatWaveform() {
   return Array.from({ length: WAVEFORM_BAR_COUNT }, () => 3);
@@ -53,10 +53,11 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
     if (reset) setWaveformLevels(flatWaveform());
   }
 
-  function startLiveWaveform(stream: MediaStream) {
+  async function startLiveWaveform(stream: MediaStream) {
     stopLiveWaveform(false);
     try {
       const audioContext = new AudioContext();
+      if (audioContext.state === "suspended") await audioContext.resume();
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.65;
@@ -69,19 +70,15 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
       const updateWaveform = (timestamp: number) => {
         if (timestamp - lastWaveformUpdateRef.current >= 80) {
           analyser.getByteTimeDomainData(data);
-          const levels = Array.from({ length: WAVEFORM_BAR_COUNT }, (_, index) => {
-            const start = Math.floor((index * data.length) / WAVEFORM_BAR_COUNT);
-            const end = Math.floor(((index + 1) * data.length) / WAVEFORM_BAR_COUNT);
-            let squareSum = 0;
-            for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
-              const deviation = data[sampleIndex] - 128;
-              squareSum += deviation * deviation;
-            }
-            const rms = Math.sqrt(squareSum / Math.max(1, end - start));
-            const noiseAboveGate = Math.max(0, rms - 4);
-            return Math.round(Math.min(46, 3 + noiseAboveGate * 3.1));
-          });
-          setWaveformLevels(levels);
+          let squareSum = 0;
+          for (const sample of data) {
+            const deviation = sample - 128;
+            squareSum += deviation * deviation;
+          }
+          const rms = Math.sqrt(squareSum / data.length);
+          const noiseAboveGate = Math.max(0, rms - 4);
+          const nextLevel = Math.round(Math.min(42, 3 + noiseAboveGate * 2.8));
+          setWaveformLevels((levels) => [...levels.slice(1), nextLevel]);
           lastWaveformUpdateRef.current = timestamp;
         }
         animationFrameRef.current = window.requestAnimationFrame(updateWaveform);
@@ -151,7 +148,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
       }
 
       mediaRecorderRef.current = mediaRecorder;
-      startLiveWaveform(stream);
+      await startLiveWaveform(stream);
       setRecordingFormat(displayAudioFormat(actualMimeType));
       recordingStartedAtRef.current = Date.now();
       setElapsedSeconds(0);
@@ -252,7 +249,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
           </div>
           <div className="recording-visualizer" aria-label={text("Live microphone level visualisation", "लाइव माइक्रोफ़ोन स्तर दृश्य") } role="img">
             {waveformLevels.map((height, index) => (
-              <span key={index} style={{ height: `${height}px` }} />
+              <span className={height > 3 ? "active" : ""} key={index} style={{ height: `${height}px` }} />
             ))}
           </div>
           <p>{text("The line moves only when the microphone hears sound. When you finish, tap Stop.", "रेखा केवल तब हिलेगी जब माइक्रोफ़ोन को आवाज़ सुनाई देगी। पूरा होने पर रोकें दबाएँ।")}</p>
