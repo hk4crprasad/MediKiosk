@@ -15,6 +15,12 @@ type VoiceRecordButtonProps = {
   onTranscript: (transcript: string) => void;
 };
 
+const WAVEFORM_BAR_COUNT = 42;
+
+function flatWaveform() {
+  return Array.from({ length: WAVEFORM_BAR_COUNT }, () => 3);
+}
+
 export function VoiceRecordButton({ encounterId, token, language = "en", onTranscript }: VoiceRecordButtonProps) {
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -24,12 +30,68 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
   const [recordedDurationSeconds, setRecordedDurationSeconds] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [transcriptReady, setTranscriptReady] = useState(false);
+  const [waveformLevels, setWaveformLevels] = useState<number[]>(flatWaveform);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioUrlRef = useRef<string | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastWaveformUpdateRef = useRef(0);
   const text = (english: string, hindi: string) => (language === "hi" ? hindi : english);
+
+  function stopLiveWaveform(reset = true) {
+    if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
+    animationFrameRef.current = null;
+    audioSourceRef.current?.disconnect();
+    audioSourceRef.current = null;
+    const audioContext = audioContextRef.current;
+    audioContextRef.current = null;
+    if (audioContext && audioContext.state !== "closed") void audioContext.close().catch(() => undefined);
+    if (reset) setWaveformLevels(flatWaveform());
+  }
+
+  function startLiveWaveform(stream: MediaStream) {
+    stopLiveWaveform(false);
+    try {
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.65;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      audioContextRef.current = audioContext;
+      audioSourceRef.current = source;
+      const data = new Uint8Array(analyser.fftSize);
+
+      const updateWaveform = (timestamp: number) => {
+        if (timestamp - lastWaveformUpdateRef.current >= 80) {
+          analyser.getByteTimeDomainData(data);
+          const levels = Array.from({ length: WAVEFORM_BAR_COUNT }, (_, index) => {
+            const start = Math.floor((index * data.length) / WAVEFORM_BAR_COUNT);
+            const end = Math.floor(((index + 1) * data.length) / WAVEFORM_BAR_COUNT);
+            let squareSum = 0;
+            for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
+              const deviation = data[sampleIndex] - 128;
+              squareSum += deviation * deviation;
+            }
+            const rms = Math.sqrt(squareSum / Math.max(1, end - start));
+            const noiseAboveGate = Math.max(0, rms - 4);
+            return Math.round(Math.min(46, 3 + noiseAboveGate * 3.1));
+          });
+          setWaveformLevels(levels);
+          lastWaveformUpdateRef.current = timestamp;
+        }
+        animationFrameRef.current = window.requestAnimationFrame(updateWaveform);
+      };
+
+      animationFrameRef.current = window.requestAnimationFrame(updateWaveform);
+    } catch {
+      setWaveformLevels(flatWaveform());
+    }
+  }
 
   useEffect(() => () => {
     const mediaRecorder = mediaRecorderRef.current;
@@ -39,6 +101,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
       mediaRecorder.stop();
     }
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    stopLiveWaveform(false);
     if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
   }, []);
 
@@ -88,6 +151,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
       }
 
       mediaRecorderRef.current = mediaRecorder;
+      startLiveWaveform(stream);
       setRecordingFormat(displayAudioFormat(actualMimeType));
       recordingStartedAtRef.current = Date.now();
       setElapsedSeconds(0);
@@ -102,6 +166,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
         const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
         const recordedForMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
         recordingStartedAtRef.current = null;
+        stopLiveWaveform();
         stream?.getTracks().forEach((track) => track.stop());
         mediaStreamRef.current = null;
         mediaRecorderRef.current = null;
@@ -121,6 +186,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
       mediaRecorder.onerror = () => {
         mediaRecorder.onstop = null;
         stream?.getTracks().forEach((track) => track.stop());
+        stopLiveWaveform();
         mediaStreamRef.current = null;
         mediaRecorderRef.current = null;
         recordingStartedAtRef.current = null;
@@ -133,6 +199,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
       setRecording(true);
     } catch (caught) {
       stream?.getTracks().forEach((track) => track.stop());
+      stopLiveWaveform();
       mediaStreamRef.current = null;
       mediaRecorderRef.current = null;
       setRecordingFormat("");
@@ -146,6 +213,7 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
 
   function stopRecording() {
     if (mediaRecorderRef.current?.state === "recording") {
+      stopLiveWaveform();
       mediaRecorderRef.current.stop();
       setRecording(false);
     }
@@ -182,12 +250,12 @@ export function VoiceRecordButton({ encounterId, token, language = "en", onTrans
             <strong>{text("Recording your words", "आपके शब्द रिकॉर्ड हो रहे हैं")}</strong>
             <time>{`${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, "0")}`}</time>
           </div>
-          <div className="recording-visualizer" aria-label={text("Audio level visualisation", "ऑडियो स्तर दृश्य") } role="img">
-            {[18, 31, 22, 40, 28, 48, 24, 36, 19, 43, 30, 52, 26, 38, 21, 33].map((height, index) => (
-              <span key={index} style={{ height: `${height}px`, animationDelay: `${index * -0.12}s` }} />
+          <div className="recording-visualizer" aria-label={text("Live microphone level visualisation", "लाइव माइक्रोफ़ोन स्तर दृश्य") } role="img">
+            {waveformLevels.map((height, index) => (
+              <span key={index} style={{ height: `${height}px` }} />
             ))}
           </div>
-          <p>{text("Speak naturally. When you finish, tap Stop.", "सामान्य रूप से बोलें। पूरा होने पर रोकें दबाएँ।")}</p>
+          <p>{text("The line moves only when the microphone hears sound. When you finish, tap Stop.", "रेखा केवल तब हिलेगी जब माइक्रोफ़ोन को आवाज़ सुनाई देगी। पूरा होने पर रोकें दबाएँ।")}</p>
           <button className="button-primary kiosk-audio voice-stop-button" onClick={stopRecording} type="button">
             ⏹ {text("Stop recording", "रिकॉर्डिंग रोकें")}{recordingFormat ? ` · ${recordingFormat}` : ""}
           </button>
