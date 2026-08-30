@@ -7,6 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
+COPY .env* ./
 
 RUN uv sync --locked --no-install-project
 
