@@ -37,9 +37,13 @@ export default function OPDDisplayPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
+    const initialLoad = window.setTimeout(() => void loadData(), 0);
+    const interval = window.setInterval(() => void loadData(), 5000);
+
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(interval);
+    };
   }, [loadData]);
 
   // Audio Announcement Simulation

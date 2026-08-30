@@ -17,7 +17,7 @@ from app.schemas.clinical import (
     TriageQueueItem,
 )
 from app.schemas.documents import DocumentResponse
-from app.schemas.encounters import EncounterResponse
+from app.schemas.encounters import EncounterResponse, PatientInput
 from app.schemas.intake import FactResponse
 from app.schemas.summaries import SummaryResponse
 from app.services.access import get_encounter_or_404

@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 
+type SandboxExchangeMetadata = {
+  timestamp: string;
+  transactionId: string;
+};
+
 export function AbdmExchangeSimulator({
   abhaId,
   encounterId,
@@ -11,10 +16,10 @@ export function AbdmExchangeSimulator({
   encounterId: string;
   bundleData?: Record<string, unknown> | null;
 }) {
-  const [step, setStep] = useState<number>(3); // M1 and M2 are pre-verified, M3 is ready to push
   const [pushing, setPushing] = useState<boolean>(false);
   const [pushed, setPushed] = useState<boolean>(false);
   const [showPayload, setShowPayload] = useState<boolean>(false);
+  const [simulationMetadata, setSimulationMetadata] = useState<SandboxExchangeMetadata | null>(null);
 
   const activeAbha = abhaId || "91-8472-1928-3011@abdm";
 
@@ -23,6 +28,10 @@ export function AbdmExchangeSimulator({
     setTimeout(() => {
       setPushing(false);
       setPushed(true);
+      setSimulationMetadata({
+        timestamp: new Date().toISOString(),
+        transactionId: `sandbox-${crypto.randomUUID()}`,
+      });
     }, 1200);
   }
 
@@ -34,11 +43,11 @@ export function AbdmExchangeSimulator({
             🇮🇳 Ayushman Bharat Digital Mission (ABDM)
           </span>
           <h3 className="display" style={{ fontSize: "1.2rem", margin: "0.25rem 0 0", color: "#1e3a8a" }}>
-            NHA ABDM Gateway Milestone Compliance (M1 · M2 · M3)
+            ABDM sandbox handoff preview (M1 · M2 · M3)
           </h3>
         </div>
         <span className={`tag ${pushed ? "" : "urgent"}`} style={{ fontSize: "0.8rem", padding: "0.3rem 0.6rem" }}>
-          {pushed ? "✓ M1–M3 ABDM Certified Exchange" : "Ready for Gateway Dispatch"}
+          {pushed ? "✓ Sandbox preview complete" : "Sandbox simulation — no live ABDM gateway exchange"}
         </span>
       </div>
 
@@ -51,7 +60,7 @@ export function AbdmExchangeSimulator({
             <span style={{ color: "#10b981", fontWeight: 900, fontSize: "0.9rem" }}>✓</span>
           </div>
           <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: "var(--ink-soft)" }}>
-            ABHA ID: <code style={{ color: "#2563eb" }}>{activeAbha}</code> verified via NHA Sandbox.
+            ABHA ID: <code style={{ color: "#2563eb" }}>{activeAbha}</code> is a local demo reference; no NHA request was made.
           </p>
         </div>
 
@@ -62,7 +71,7 @@ export function AbdmExchangeSimulator({
             <span style={{ color: "#10b981", fontWeight: 900, fontSize: "0.9rem" }}>✓</span>
           </div>
           <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: "var(--ink-soft)" }}>
-            HIP <code style={{ color: "#2563eb" }}>IN29100012</code> context linked to OPD Record #{encounterId.slice(0, 6).toUpperCase()}.
+            Local HIP care-context preview for OPD Record #{encounterId.slice(0, 6).toUpperCase()}.
           </p>
         </div>
 
@@ -75,7 +84,7 @@ export function AbdmExchangeSimulator({
             </span>
           </div>
           <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: "var(--ink-soft)" }}>
-            {pushed ? "Encrypted FHIR R4 Bundle dispatched to Health Locker." : "Pending encrypted gateway dispatch."}
+            {pushed ? "Local preview marked complete. No FHIR data was sent outside MediKiosk." : "Local FHIR export is ready for a future gateway integration."}
           </p>
         </div>
       </div>
@@ -90,7 +99,7 @@ export function AbdmExchangeSimulator({
             onClick={handleSimulatePush}
             style={{ fontSize: "0.85rem", padding: "0.45rem 0.9rem" }}
           >
-            {pushing ? "Dispatching to ABDM Gateway…" : pushed ? "✓ Dispatched to Patient ABHA Wallet" : "🚀 Push FHIR to ABDM Health Locker (M3)"}
+            {pushing ? "Preparing local preview…" : pushed ? "✓ Local sandbox preview complete" : "▶ Run sandbox handoff preview"}
           </button>
           <button
             type="button"
@@ -98,12 +107,12 @@ export function AbdmExchangeSimulator({
             onClick={() => setShowPayload((s) => !s)}
             style={{ fontSize: "0.85rem", padding: "0.45rem 0.9rem" }}
           >
-            {showPayload ? "Hide Gateway Payload" : "🔍 Inspect Gateway JSON Payload"}
+            {showPayload ? "Hide local preview payload" : "🔍 Inspect local preview payload"}
           </button>
         </div>
 
         <small style={{ color: "var(--ink-soft)" }}>
-          Gateway Endpoint: <code style={{ fontSize: "0.75rem" }}>dev.abdm.gov.in/gateway/v0.5/health-information/hip/on-request</code>
+          Reference endpoint (not called): <code style={{ fontSize: "0.75rem" }}>dev.abdm.gov.in/gateway/v0.5/health-information/hip/on-request</code>
         </small>
       </div>
 
@@ -114,15 +123,16 @@ export function AbdmExchangeSimulator({
             {JSON.stringify(
               {
                 requestId: `req-${encounterId.slice(0, 8)}`,
-                timestamp: new Date().toISOString(),
-                transactionId: `txn-abdm-${Date.now()}`,
+                simulation: true,
+                gatewayRequestMade: false,
+                timestamp: simulationMetadata?.timestamp ?? "Generated when the local preview runs",
+                transactionId: simulationMetadata?.transactionId ?? "Generated when the local preview runs",
                 hipId: "IN29100012-APEX-HOSPITAL",
-                hiuId: "IN00100001-NHA-LOCKER",
                 patient: {
                   id: activeAbha,
                   encounterId: encounterId,
                 },
-                encryptedBundlePayload: bundleData || {
+                localBundlePreview: bundleData || {
                   resourceType: "Bundle",
                   type: "collection",
                   entryCount: 4,

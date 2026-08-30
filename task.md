@@ -69,6 +69,7 @@
 - [ ] KSK-05: create one English and one Hindi synthetic chest encounter. Confirm the consent, questions, choices, audio, review, and document-upload surfaces remain in the selected language while submitted values stay controlled API values.
 - [ ] KSK-06: leave a kiosk session untouched for two minutes and confirm the warning then reset; submit a completed intake and confirm the kiosk returns to `/kiosk/start` with no token in session storage.
 - [ ] KSK-07: revoke consent and confirm the explanation says device access ends without claiming deletion of already recorded clinical/audit evidence.
+- [ ] KSK-08: on the target tablet, record a short note and verify the live waveform, optional playback, AI wording check, and editable note hand-off work; confirm a controlled touch choice remains required to submit the answer.
 
 ## Active task — B3 Safety, Triage, and Clinician Review
 
@@ -263,6 +264,7 @@
 | 2026-08-29 | SIH Add-on 4: Interactive ABDM M1-M3 Gateway Simulator | Implemented | Codex | Integrated interactive ABDM sandbox stepper into clinician workspace showing real-time M1 ABHA verification, M2 HIP Care Context linking, and M3 Encrypted FHIR Gateway dispatch with JSON inspection. |
 | 2026-08-28 | Browser Voice Recording Format Repair | Implemented; manual API acceptance pending | Codex/User | Removed false WAV relabelling. The kiosk now negotiates WebM/Opus, Ogg/Opus, or M4A/AAC, uploads the real MIME type and extension, and shows the active format. FastAPI normalises codec parameters and validates WebM, Ogg, MP4/M4A, WAV, and MP3 signatures before STT. Automated format tests pass locally; user-run browser/Postman acceptance remains required. |
 | 2026-08-28 | Flagship Bilingual Kiosk & Chest HPI | Implemented; browser demo-tested; user/device acceptance pending | Codex/User | Reduced new kiosk sessions to English/Hindi, localised API question and controlled-choice labels, added a structured chest HPI (onset, character, radiation, severity, timing, associated symptoms), corrected revocation wording, and added local privacy reset after submission/inactivity. `frontend/tests/kiosk_demo_e2e.py` passes with mocked API responses; it never claims live-provider acceptance. |
+| 2026-08-30 | Kiosk voice visualisation, playback, and AI wording hand-off | Implemented; target-device acceptance pending | Codex/User | Added a live recording waveform and timer, optional patient playback, explicit AI transcription check, and editable hand-off to the optional note box. Voice cannot choose or submit the clinical response: the patient must still select a controlled touch answer. Browser verification passes with mocked microphone/transcription. |
 
 ## Update protocol
 

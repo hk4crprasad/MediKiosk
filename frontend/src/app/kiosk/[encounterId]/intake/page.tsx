@@ -144,14 +144,6 @@ export default function IntakePage() {
 
   function handleVoiceTranscript(transcript: string) {
     setAdditionalInput(transcript);
-    if (!question) return;
-    const normalisedTranscript = transcript.toLowerCase();
-    const matched = question.choices.find((choice) => {
-      const displayed = choiceLabel(choice, question.choice_labels).toLowerCase();
-      const raw = choice.replaceAll("_", " ").toLowerCase();
-      return normalisedTranscript.includes(displayed) || normalisedTranscript.includes(raw) || normalisedTranscript.includes(choice);
-    });
-    if (matched) setAnswer(matched);
   }
 
   async function handleRevokeConsent() {
@@ -217,8 +209,8 @@ export default function IntakePage() {
 
           {token && !loading && question && <>
             <div className="kiosk-question-header">
-              <p className="kiosk-question-count">{text("Tap or speak an answer", "टैप करें या जवाब बोलें")}</p>
-              <div className="kiosk-audio-actions"><QuestionAudioButton encounterId={encounterId} language={language} questionKey={question.key} token={token} /><VoiceRecordButton encounterId={encounterId} language={language} onTranscript={handleVoiceTranscript} token={token} /></div>
+              <p className="kiosk-question-count">{text("Tap an answer · record an optional note", "उत्तर चुनें · वैकल्पिक नोट रिकॉर्ड करें")}</p>
+              <div className="kiosk-audio-actions"><QuestionAudioButton encounterId={encounterId} language={language} questionKey={question.key} token={token} /><VoiceRecordButton encounterId={encounterId} key={question.key} language={language} onTranscript={handleVoiceTranscript} token={token} /></div>
             </div>
             <h1 className="display kiosk-question">{question.prompt}</h1>
             <p className="panel-copy kiosk-copy">{text("Choose the option that fits best. Your clinical team will review the information with you.", "जो विकल्प सबसे सही हो उसे चुनें। आपकी क्लिनिकल टीम इस जानकारी की समीक्षा करेगी।")}</p>
@@ -230,9 +222,9 @@ export default function IntakePage() {
               ))}
             </div>
             <div className="additional-input">
-              <label htmlFor="additionalInput">{text("Optional spoken or caregiver note", "वैकल्पिक बोला गया या देखभालकर्ता का नोट")}</label>
-              <p>{text("This note helps the clinician review context. A touch choice above is still required and is the only value used as your answer.", "यह नोट चिकित्सक को संदर्भ समझने में मदद करता है। ऊपर दिया गया टच विकल्प फिर भी आवश्यक है और वही आपके उत्तर के रूप में उपयोग होगा।")}</p>
-              <textarea id="additionalInput" onChange={(event) => setAdditionalInput(event.target.value)} placeholder={text("Spoken words appear here. Typing is optional.", "बोले गए शब्द यहाँ दिखाई देंगे। टाइप करना वैकल्पिक है।")} value={additionalInput} />
+              <label htmlFor="additionalInput">{text("Optional AI-checked spoken or caregiver note", "वैकल्पिक AI-जांचा गया बोला गया या देखभालकर्ता का नोट")}</label>
+              <p>{text("After you record and check wording, the transcript appears here for you to review or edit. A touch choice above is still required and is the only value used as your answer.", "रिकॉर्डिंग और शब्द जांचने के बाद, प्रतिलेख यहाँ समीक्षा या बदलाव के लिए दिखाई देगा। ऊपर दिया गया टच विकल्प फिर भी आवश्यक है और वही आपके उत्तर के रूप में उपयोग होगा।")}</p>
+              <textarea id="additionalInput" onChange={(event) => setAdditionalInput(event.target.value)} placeholder={text("AI-checked spoken words appear here. Typing is optional.", "AI-जांचे गए बोले गए शब्द यहाँ दिखाई देंगे। टाइप करना वैकल्पिक है।")} value={additionalInput} />
             </div>
             <div className="button-row kiosk-action-row"><button className="button-primary kiosk-primary" disabled={saving || !answer} onClick={continueIntake} type="button">{saving ? text("Saving…", "सहेजा जा रहा है…") : text("Save and continue →", "सहेजें और आगे बढ़ें →")}</button><button className="button-secondary kiosk-danger" disabled={saving} onClick={handleRevokeConsent} type="button">🔒 {text("End session & revoke consent", "सत्र समाप्त करें और सहमति वापस लें")}</button></div>
           </>}
