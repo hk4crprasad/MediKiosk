@@ -11,7 +11,17 @@ class Base(DeclarativeBase):
 
 
 settings = get_settings()
-engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+
+# Prepare engine connect_args for Supabase / PgBouncer pooler compatibility
+connect_args = {}
+if "pooler.supabase.com" in settings.database_url or ":6543" in settings.database_url:
+    connect_args["statement_cache_size"] = 0
+
+engine = create_async_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    connect_args=connect_args if connect_args else {},
+)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 

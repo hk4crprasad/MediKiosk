@@ -1,34 +1,36 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: medikiosk
-      POSTGRES_USER: medikiosk
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medikiosk -d medikiosk"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks: [internal]
+  # Local PostgreSQL service (Commented out — using Cloud Supabase)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_DB: medikiosk
+  #     POSTGRES_USER: medikiosk
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medikiosk}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U medikiosk -d medikiosk"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks: [internal]
 
   api:
     build: ./backend
     env_file: ./backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://medikiosk:${POSTGRES_PASSWORD}@postgres:5432/medikiosk
+      # Cloud Supabase IPv4 Pooler URI (ap-northeast-1)
+      DATABASE_URL: postgresql+asyncpg://postgres.ewzlxrkfiiyvsphuubhy:SIHCtrlAltDefeat@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres
       AUTO_CREATE_SCHEMA: "true"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
     ports:
       - "8000:8000"
     networks: [internal]
 
-volumes:
-  postgres_data:
+# volumes:
+#   postgres_data:
 
 networks:
   internal:

@@ -37,8 +37,19 @@ async def create_encounter(
                 "supported_pathway_versions": supported_pathway_versions(),
             },
         )
-    patient = Patient(**payload.patient.model_dump())
-    session.add(patient)
+    patient = None
+    if payload.patient.abha_identifier:
+        result = await session.execute(
+            select(Patient).where(Patient.abha_identifier == payload.patient.abha_identifier)
+        )
+        patient = result.scalar_one_or_none()
+        if patient:
+            for k, v in payload.patient.model_dump(exclude_unset=True).items():
+                if v is not None:
+                    setattr(patient, k, v)
+    if not patient:
+        patient = Patient(**payload.patient.model_dump())
+        session.add(patient)
     await session.flush()
     encounter = Encounter(patient_id=patient.id, mode=payload.mode, pathway_version=payload.pathway_version)
     session.add(encounter)
