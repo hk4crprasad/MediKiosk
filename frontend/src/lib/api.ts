@@ -24,7 +24,7 @@ async function request<T>(path: string, { body, token, ...options }: RequestOpti
 export type Pathway = "chest-discomfort-v1" | "fever-v1" | "headache-v1" | "abdominal-pain-v1" | "ayush-dashavidha-v1";
 export type EncounterCreated = { encounter: { id: string; pathway_version: Pathway; status: string }; kiosk_session_token: string };
 export type KioskLanguage = "en" | "hi";
-export type Question = { key: string; prompt: string; input_type: "single_choice"; required: boolean; choices: string[]; choice_labels?: Record<string, string>; pathway_version: string };
+export type Question = { key: string; prompt: string; input_type: "single_choice"; required: boolean; choices: string[]; choice_labels?: Record<string, string>; pathway_version: string; question_index: number; question_total: number };
 export type Fact = { id: string; fact_type: string; value: { value?: unknown }; verification_status: string; display_label?: string | null; display_value?: string | null };
 export type StaffToken = { access_token: string; expires_in_seconds: number };
 export type TriageQueueItem = { encounter_id: string; encounter_status: string; patient_display_name: string | null; red_flag: { id: string; severity: string; reason: string; rule_id: string; acknowledged_at: string | null } };

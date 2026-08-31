@@ -17,6 +17,8 @@ class QuestionResponse(BaseModel):
     choices: list[str] = []
     choice_labels: dict[str, str] = Field(default_factory=dict)
     pathway_version: str
+    question_index: int = Field(description="1-based position of this question in the current pathway sequence")
+    question_total: int = Field(description="Total number of questions currently active for this pathway")
 
 
 class IntakeResponseCreateRequest(BaseModel):

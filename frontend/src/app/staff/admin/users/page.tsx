@@ -90,45 +90,42 @@ export default function AdminUsersPage() {
             <>
               <form onSubmit={handleCreateUser} style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                  <div style={{ flex: 2, minWidth: "200px" }}>
-                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>Staff Email</label>
+                  <label className="field" style={{ flex: 2, minWidth: "200px" }}>
+                    <span>Staff Email</span>
                     <input
                       type="email"
                       required
                       placeholder="doctor.sharma@hospital.gov.in"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      style={{ width: "100%", padding: "0.6rem", borderRadius: "8px", background: "rgba(0,0,0,0.2)", color: "inherit", border: "1px solid var(--border, #4b5563)" }}
                     />
-                  </div>
+                  </label>
 
-                  <div style={{ flex: 2, minWidth: "180px" }}>
-                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>Password</label>
+                  <label className="field" style={{ flex: 2, minWidth: "180px" }}>
+                    <span>Password</span>
                     <input
                       type="password"
                       required
                       placeholder="Temporary password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      style={{ width: "100%", padding: "0.6rem", borderRadius: "8px", background: "rgba(0,0,0,0.2)", color: "inherit", border: "1px solid var(--border, #4b5563)" }}
                     />
-                  </div>
+                  </label>
 
-                  <div style={{ flex: 1, minWidth: "140px" }}>
-                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>Role</label>
+                  <label className="field" style={{ flex: 1, minWidth: "140px" }}>
+                    <span>Role</span>
                     <select
                       value={role}
                       onChange={(e) => setRole(e.target.value as "admin" | "triage" | "physician")}
-                      style={{ width: "100%", padding: "0.6rem", borderRadius: "8px", background: "rgba(0,0,0,0.2)", color: "inherit", border: "1px solid var(--border, #4b5563)" }}
                     >
                       <option value="physician">Physician (Doctor)</option>
                       <option value="triage">Triage (Nurse / Staff)</option>
                       <option value="admin">Administrator</option>
                     </select>
-                  </div>
+                  </label>
                 </div>
 
-                {success && <p className="notice" style={{ background: "rgba(16, 185, 129, 0.1)", borderColor: "#10b981", color: "#10b981" }}>{success}</p>}
+                {success && <p className="notice success">{success}</p>}
                 {error && <p className="notice error" role="alert">{error}</p>}
 
                 <div className="button-row" style={{ marginTop: "0.5rem" }}>

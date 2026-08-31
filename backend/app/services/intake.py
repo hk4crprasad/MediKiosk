@@ -4,12 +4,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.clinical_config.pathways import CHEST_PATHWAY_VERSION, active_questions, is_supported_pathway
-from app.clinical_config.red_flags import (
-    CHEST_BREATHLESSNESS_REASON,
-    CHEST_BREATHLESSNESS_RULE_ID,
-    RULE_VERSION,
-)
+from app.clinical_config.pathways import active_questions, is_supported_pathway
+from app.clinical_config.red_flags import RULE_SET_VERSION, rules_for_pathway
 from app.models import ClinicalFact, Consent, Encounter, PatientResponse, RedFlag
 from app.models.entities import EncounterStatus, RedFlagSeverity, VerificationStatus
 from app.schemas.intake import IntakeResponseCreateRequest
@@ -42,15 +38,25 @@ async def answer_map(session: AsyncSession, encounter_id: UUID) -> dict[str, obj
 
 
 async def next_question(session: AsyncSession, encounter: Encounter) -> dict | None:
+    question, _index, _total = await next_question_progress(session, encounter)
+    return question
+
+
+async def next_question_progress(session: AsyncSession, encounter: Encounter) -> tuple[dict | None, int, int]:
+    """Return the next unanswered question plus its 1-based position and the
+    current total question count for the pathway (both change as conditional
+    follow-up questions become active, so this is recomputed on every call)."""
     if not is_supported_pathway(encounter.pathway_version):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Configured pathway version is not available"
         )
     answers = await answer_map(session, encounter.id)
-    for question in active_questions(encounter.pathway_version, answers):
+    sequence = active_questions(encounter.pathway_version, answers)
+    total = len(sequence)
+    for index, question in enumerate(sequence, start=1):
         if question["key"] not in answers:
-            return question
-    return None
+            return question, index, total
+    return None, total, total
 
 
 async def submit_response(
@@ -119,44 +125,39 @@ async def submit_response(
 async def evaluate_red_flags(
     session: AsyncSession, encounter: Encounter, answers: dict[str, object]
 ) -> list[RedFlag]:
-    if encounter.pathway_version != CHEST_PATHWAY_VERSION:
-        return []
     triggered: list[RedFlag] = []
-    is_triggered = answers.get("chief_complaint") == "chest_discomfort" and answers.get("breathlessness") in {
-        True,
-        "yes",
-        "Yes",
-    }
-    if not is_triggered:
-        return triggered
-    existing = await session.scalar(
-        select(RedFlag).where(
-            RedFlag.encounter_id == encounter.id,
-            RedFlag.rule_id == CHEST_BREATHLESSNESS_RULE_ID,
-            RedFlag.active.is_(True),
-        )
-    )
-    if existing:
-        return [existing]
-    facts = (
-        await session.scalars(
-            select(ClinicalFact).where(
-                ClinicalFact.encounter_id == encounter.id,
-                ClinicalFact.fact_type.in_(["chief_complaint", "breathlessness"]),
+    for rule in rules_for_pathway(encounter.pathway_version):
+        if not rule.condition(answers):
+            continue
+        existing = await session.scalar(
+            select(RedFlag).where(
+                RedFlag.encounter_id == encounter.id,
+                RedFlag.rule_id == rule.rule_id,
+                RedFlag.active.is_(True),
             )
         )
-    ).all()
-    flag = RedFlag(
-        encounter_id=encounter.id,
-        rule_id=CHEST_BREATHLESSNESS_RULE_ID,
-        rule_version=RULE_VERSION,
-        severity=RedFlagSeverity.urgent,
-        reason=CHEST_BREATHLESSNESS_REASON,
-        evidence_fact_ids=[str(item.id) for item in facts],
-    )
-    session.add(flag)
-    encounter.status = EncounterStatus.urgent_review
-    triggered.append(flag)
+        if existing:
+            triggered.append(existing)
+            continue
+        facts = (
+            await session.scalars(
+                select(ClinicalFact).where(
+                    ClinicalFact.encounter_id == encounter.id,
+                    ClinicalFact.fact_type.in_(rule.evidence_fact_types),
+                )
+            )
+        ).all()
+        flag = RedFlag(
+            encounter_id=encounter.id,
+            rule_id=rule.rule_id,
+            rule_version=RULE_SET_VERSION,
+            severity=RedFlagSeverity(rule.severity),
+            reason=rule.reason,
+            evidence_fact_ids=[str(item.id) for item in facts],
+        )
+        session.add(flag)
+        encounter.status = EncounterStatus.urgent_review
+        triggered.append(flag)
     return triggered
 
 

@@ -104,16 +104,13 @@ export function StartEncounterForm() {
           </div>
 
           {/* Caregiver / Attendant Proxy Mode Selection */}
-          <div style={{ margin: "1.25rem 0", padding: "1rem", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
-            <p style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: "600" }}>
-              {text("Who is completing this intake?", "यह जानकारी कौन दर्ज कर रहा है?")}
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+          <div className="respondent-card">
+            <p>{text("Who is completing this intake?", "यह जानकारी कौन दर्ज कर रहा है?")}</p>
+            <div className="respondent-grid">
               <button
                 type="button"
                 className={`choice ${respondentType === "patient" ? "selected" : ""}`}
                 onClick={() => { setRespondentType("patient"); setCaregiverRelationship(""); }}
-                style={{ padding: "0.75rem", textAlign: "center" }}
               >
                 <strong>👤 {text("Patient (Self)", "मरीज (स्वयं)")}</strong>
               </button>
@@ -121,25 +118,21 @@ export function StartEncounterForm() {
                 type="button"
                 className={`choice ${respondentType === "caregiver" ? "selected" : ""}`}
                 onClick={() => { setRespondentType("caregiver"); if (!caregiverRelationship) setCaregiverRelationship("Son / Daughter"); }}
-                style={{ padding: "0.75rem", textAlign: "center" }}
               >
                 <strong>👥 {text("Attendant / Relative", "परिचारक / परिजन")}</strong>
               </button>
             </div>
 
             {respondentType === "caregiver" && (
-              <div style={{ marginTop: "0.75rem" }}>
-                <small style={{ display: "block", marginBottom: "0.4rem", opacity: 0.85 }}>
-                  {text("Relationship to patient:", "मरीज से संबंध:")}
-                </small>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+              <div className="respondent-relationship">
+                <small>{text("Relationship to patient:", "मरीज से संबंध:")}</small>
+                <div className="respondent-relationship-row">
                   {["Son / Daughter", "Spouse", "Parent", "Sibling", "Relative", "Hospital Volunteer"].map((rel) => (
                     <button
                       key={rel}
                       type="button"
                       className={`choice ${caregiverRelationship === rel ? "selected" : ""}`}
                       onClick={() => setCaregiverRelationship(rel)}
-                      style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem" }}
                     >
                       {rel}
                     </button>

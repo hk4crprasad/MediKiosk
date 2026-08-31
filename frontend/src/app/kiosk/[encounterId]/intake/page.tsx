@@ -208,8 +208,11 @@ export default function IntakePage() {
           {showIdleWarning && <p className="notice" role="status">{text("For privacy, this session will reset in 15 seconds. Tap anywhere to continue.", "गोपनीयता के लिए यह सत्र 15 सेकंड में रीसेट हो जाएगा। जारी रखने के लिए कहीं भी टैप करें।")}</p>}
 
           {token && !loading && question && <>
+            <div className="kiosk-progress-track" role="progressbar" aria-valuenow={question.question_index} aria-valuemin={1} aria-valuemax={question.question_total} aria-label={text("Intake progress", "इंटेक प्रगति")}>
+              <div className="kiosk-progress-fill" style={{ width: `${Math.round((question.question_index / question.question_total) * 100)}%` }} />
+            </div>
             <div className="kiosk-question-header">
-              <p className="kiosk-question-count">{text("Tap an answer · record an optional note", "उत्तर चुनें · वैकल्पिक नोट रिकॉर्ड करें")}</p>
+              <p className="kiosk-question-count">{text(`Question ${question.question_index} of ${question.question_total} · tap an answer`, `प्रश्न ${question.question_index} / ${question.question_total} · उत्तर चुनें`)}</p>
               <div className="kiosk-audio-actions"><QuestionAudioButton encounterId={encounterId} language={language} questionKey={question.key} token={token} /><VoiceRecordButton encounterId={encounterId} key={question.key} language={language} onTranscript={handleVoiceTranscript} token={token} /></div>
             </div>
             <h1 className="display kiosk-question">{question.prompt}</h1>
@@ -239,7 +242,7 @@ export default function IntakePage() {
                 type="button"
                 className="button-secondary kiosk-secondary"
                 onClick={handleAudioRecap}
-                style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem", background: isPlayingRecap ? "var(--accent)" : undefined }}
+                style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem", background: isPlayingRecap ? "var(--sun)" : undefined, borderColor: isPlayingRecap ? "var(--sun)" : undefined }}
               >
                 {isPlayingRecap ? "⏹ " + text("Stop read-aloud", "बोलना रोकें") : "🔊 " + text("Listen to recap aloud", "पूरी जानकारी बोलकर सुनें")}
               </button>
@@ -269,7 +272,7 @@ export default function IntakePage() {
                 </small>
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                <QRCodeSVG value={`https://medikiosk.gov.in/staff/encounters/${encounterId}`} size={130} />
+                <QRCodeSVG value={`${typeof window !== "undefined" ? window.location.origin : ""}/staff/encounters/${encounterId}`} size={130} />
                 <button
                   type="button"
                   className="button-secondary"

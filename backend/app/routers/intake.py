@@ -20,7 +20,12 @@ from app.schemas.intake import (
 )
 from app.services.access import ensure_encounter_access, get_encounter_or_404
 from app.services.audit import write_audit
-from app.services.intake import ensure_active_consent, next_question, required_missing, submit_response
+from app.services.intake import (
+    ensure_active_consent,
+    next_question_progress,
+    required_missing,
+    submit_response,
+)
 
 router = APIRouter(prefix="/encounters/{encounter_id}", tags=["intake"])
 
@@ -34,13 +39,16 @@ async def get_next_question(
     ensure_encounter_access(principal, encounter_id)
     encounter = await get_encounter_or_404(session, encounter_id)
     await ensure_active_consent(session, encounter_id)
-    question = await next_question(session, encounter)
+    question, index, total = await next_question_progress(session, encounter)
     if question is None:
         return None
     patient = await session.get(Patient, encounter.patient_id)
     language = patient.preferred_language if patient else "en"
     return QuestionResponse(
-        **localise_question(question, language), pathway_version=encounter.pathway_version
+        **localise_question(question, language),
+        pathway_version=encounter.pathway_version,
+        question_index=index,
+        question_total=total,
     )
 
 
