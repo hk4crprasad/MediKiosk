@@ -39,6 +39,11 @@ class VisionExtraction(BaseModel):
     entities: list[ExtractedEntity] = Field(default_factory=list, max_length=100)
 
 
+class MedicalRelevanceCheck(BaseModel):
+    is_medical_document: bool
+    reason: str = Field(min_length=1, max_length=500)
+
+
 SPEECH_FIXTURES = {
     "en_chest_discomfort_v1": AdapterOutput(
         raw_text="Synthetic transcript: I have chest discomfort and breathlessness.",
@@ -369,6 +374,83 @@ class OpenAICompatibleVisionExtractor:
             ) from exc
         finally:
             pdf.close()
+
+    async def check_medical_relevance(self, content: bytes, mime_type: str) -> MedicalRelevanceCheck:
+        """Classify a single page/image as a medical document or not, before it is saved
+        anywhere. For a PDF this renders only the first page — enough to tell a
+        prescription/lab report/discharge summary apart from an unrelated file without
+        the cost of classifying every page."""
+        if not self.configured:
+            raise DomainError(
+                code="vision_extraction_unavailable",
+                message="OpenAI-compatible vision extraction is not configured; use manual review.",
+                status_code=503,
+            )
+        if mime_type == "application/pdf":
+            try:
+                pdf = fitz.open(stream=content, filetype="pdf")
+            except (fitz.FileDataError, RuntimeError, ValueError) as exc:
+                raise DomainError(
+                    code="pdf_processing_unavailable",
+                    message="The uploaded PDF could not be read; use manual review.",
+                    status_code=422,
+                ) from exc
+            try:
+                if pdf.page_count < 1:
+                    raise DomainError(
+                        code="pdf_processing_unavailable",
+                        message="The uploaded PDF has no readable pages; use manual review.",
+                        status_code=422,
+                    )
+                scale = max(self._settings.pdf_render_dpi, 72) / 72
+                image_bytes = pdf[0].get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False).tobytes("png")
+            finally:
+                pdf.close()
+            image_mime = "image/png"
+        else:
+            image_bytes, image_mime = content, mime_type
+
+        image_data_url = f"data:{image_mime};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+        prompt = get_prompt("medical_relevance_check")
+        client = AsyncOpenAI(
+            base_url=self._settings.llm_base_url,
+            api_key=self._settings.llm_api_key,
+            timeout=self._settings.llm_timeout_seconds,
+        )
+        try:
+            response = await client.chat.completions.create(
+                model=self._settings.llm_model,
+                messages=[
+                    {"role": "system", "content": prompt.text},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Classify this uploaded document."},
+                            {"type": "image_url", "image_url": {"url": image_data_url}},
+                        ],
+                    },
+                ],
+            )
+            response_text = response.choices[0].message.content
+            if not isinstance(response_text, str):
+                raise ValueError("Relevance check response content is not text")
+            return MedicalRelevanceCheck.model_validate_json(response_text)
+        except (
+            APIError,
+            APIConnectionError,
+            APITimeoutError,
+            IndexError,
+            TypeError,
+            ValueError,
+            ValidationError,
+        ) as exc:
+            raise DomainError(
+                code="medical_relevance_check_unavailable",
+                message="Could not verify this file is a medical document; use manual review.",
+                status_code=503,
+            ) from exc
+        finally:
+            await client.close()
 
 
 def generate_mock_wav(duration_seconds: float = 0.5, sample_rate: int = 16000) -> bytes:

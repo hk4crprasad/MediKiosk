@@ -173,6 +173,32 @@ async def upload_record(
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="visit_date must be YYYY-MM-DD"
             ) from exc
+
+    # AI relevance gate: reject and persist nothing (no blob, no DB row) if the file is
+    # not a medical document. Only enforced when real vision classification is
+    # configured — like the rest of the app's AI features, an unavailable/misconfigured
+    # provider falls back to allowing manual review rather than blocking the patient.
+    if settings.ocr_adapter_mode.strip().lower() == "openai_compatible":
+        try:
+            relevance = await OpenAICompatibleVisionExtractor(settings).check_medical_relevance(
+                content, file.content_type
+            )
+        except DomainError:
+            relevance = None
+        if relevance is not None and not relevance.is_medical_document:
+            await write_audit(
+                session,
+                "patient.record_upload_rejected_not_medical",
+                actor_id=principal.subject,
+                request=request,
+                metadata={"reason": relevance.reason},
+            )
+            await session.commit()
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"This file does not appear to be a medical document: {relevance.reason}",
+            )
+
     storage_key = f"patient-records/{principal.subject}/{uuid4()}-{safe_filename(file.filename or 'upload')}"
     storage = AzureBlobDocumentStorage(settings)
     await storage.upload(storage_key, content, file.content_type)

@@ -39,6 +39,11 @@ _PROMPT_FILES = {
         "openai-compatible-v1",
         "patient-history-summary.openai-compatible-v1.md",
     ),
+    "medical_relevance_check": (
+        "medical_relevance_check.is_medical_document",
+        "openai-compatible-v1",
+        "medical-relevance-check.openai-compatible-v1.md",
+    ),
 }
 
 
