@@ -22,7 +22,7 @@ import {
 } from "@/lib/api";
 import { clearKioskSession, useKioskSessionReset } from "@/lib/kiosk-session";
 
-const SUBMISSION_RESET_SECONDS = 8;
+const SUBMISSION_RESET_SECONDS = 180;
 
 function getChoiceIcon(value: string, questionKey: string): string {
   if (questionKey.includes("severity") || value === "mild" || value === "moderate" || value === "severe" || value === "very_severe") {
@@ -37,6 +37,12 @@ function getChoiceIcon(value: string, questionKey: string): string {
   if (value === "yes") return "✓ ";
   if (value === "no") return "✕ ";
   return "";
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function choiceLabel(value: string, labels: Record<string, string> = {}) {
@@ -284,7 +290,7 @@ export default function IntakePage() {
               </div>
             </div>
 
-            <p className="panel-copy kiosk-copy">{text("For privacy, this kiosk will reset in", "गोपनीयता के लिए यह कियोस्क रीसेट होगा:")} <strong>{submissionSecondsLeft}</strong> {text("seconds. Please stay nearby if you need urgent help.", "सेकंड में। यदि आपको तुरंत सहायता चाहिए तो पास ही रहें और कर्मचारी को बताएँ।")}</p>
+            <p className="panel-copy kiosk-copy">{text("For privacy, this kiosk will reset in", "गोपनीयता के लिए यह कियोस्क रीसेट होगा:")} <strong>{formatCountdown(submissionSecondsLeft)}</strong> {text("minutes. There is time to print your token. Please stay nearby if you need urgent help.", "मिनट में। अपना टोकन प्रिंट करने के लिए पर्याप्त समय है। यदि आपको तुरंत सहायता चाहिए तो पास ही रहें और कर्मचारी को बताएँ।")}</p>
             <div className="button-row kiosk-action-row"><button className="button-secondary kiosk-secondary" onClick={resetToStart} type="button">{text("Reset now", "अभी रीसेट करें")}</button></div>
           </>}
           {error && <p className="notice error" role="alert">{error}</p>}

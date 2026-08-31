@@ -266,3 +266,127 @@ export async function getNextQuestionAudio(id: string, token: string, expectedQu
   }
   return response.blob();
 }
+
+// --- Patient portal ---------------------------------------------------
+// A registered patient's own document archive. Deliberately separate from
+// the kiosk/staff types above: a portal account never creates or joins a
+// kiosk Encounter (see backend app/models/entities.py's "Patient portal" section).
+
+export type PatientToken = { access_token: string; expires_in_seconds: number };
+export type CurrentPatient = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  birth_year: number | null;
+  sex: string | null;
+  abha_identifier: string | null;
+  active: boolean;
+  created_at: string;
+};
+export type PatientRecord = {
+  id: string;
+  patient_account_id: string;
+  document_type: string;
+  visit_date: string | null;
+  hospital_or_clinic: string | null;
+  visit_reason: string | null;
+  original_filename: string;
+  mime_type: string;
+  size_bytes: number;
+  processing_status: string;
+  created_at: string;
+};
+export type PatientHistorySummary = {
+  id: string;
+  patient_account_id: string;
+  content: Record<string, unknown>;
+  text: string;
+  source: string;
+  prompt_version: string | null;
+  prompt_metadata: Record<string, unknown>;
+  created_at: string;
+};
+export type PatientSearchResult = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  abha_identifier: string | null;
+  record_count: number;
+  last_activity_at: string | null;
+};
+export type PatientProfile = {
+  account: CurrentPatient;
+  records: PatientRecord[];
+  summary: PatientHistorySummary | null;
+};
+
+export const registerPatient = (payload: {
+  email: string;
+  password: string;
+  displayName?: string;
+  birthYear?: number;
+  sex?: string;
+  abhaIdentifier?: string;
+}) =>
+  request<PatientToken>("/patients/register", {
+    method: "POST",
+    body: {
+      email: payload.email,
+      password: payload.password,
+      display_name: payload.displayName || null,
+      birth_year: payload.birthYear || null,
+      sex: payload.sex || null,
+      abha_identifier: payload.abhaIdentifier || null,
+    },
+  });
+export const loginPatient = (email: string, password: string) =>
+  request<PatientToken>("/patients/login", { method: "POST", body: { email, password } });
+export const logoutPatient = (token: string) => request<void>("/patients/logout", { method: "POST", token });
+export const getPatientMe = (token: string) => request<CurrentPatient>("/patients/me", { token });
+
+export async function uploadPatientRecord(
+  token: string,
+  file: File,
+  fields: { documentType: string; visitDate?: string; hospitalOrClinic?: string; visitReason?: string }
+): Promise<PatientRecord> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("document_type", fields.documentType);
+  if (fields.visitDate) formData.append("visit_date", fields.visitDate);
+  if (fields.hospitalOrClinic) formData.append("hospital_or_clinic", fields.hospitalOrClinic);
+  if (fields.visitReason) formData.append("visit_reason", fields.visitReason);
+  const response = await fetch(`${API_BASE_URL}/patients/records`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: { message?: string }; detail?: string } | null;
+    throw new ApiError(response.status, payload?.error?.message ?? payload?.detail ?? "Record upload failed.", response.headers.get("X-Request-ID") ?? undefined);
+  }
+  return response.json() as Promise<PatientRecord>;
+}
+
+export const listPatientRecords = (token: string) => request<PatientRecord[]>("/patients/records", { token });
+export const extractPatientRecord = (recordId: string, token: string, fixtureId: string = "printed_lab_report_v1") =>
+  request<AssistiveArtifact>(`/patients/records/${recordId}/extractions`, { method: "POST", token, body: { fixture_id: fixtureId } });
+export const generatePatientSummary = (token: string) =>
+  request<PatientHistorySummary>("/patients/summary/generate", { method: "POST", token });
+export const getPatientSummary = (token: string) =>
+  request<PatientHistorySummary | null>("/patients/summary", { token });
+
+export async function fetchPatientRecordBlob(recordId: string, token: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/patients/records/${recordId}/content`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new ApiError(response.status, "Record download failed.");
+  return response.blob();
+}
+
+// Staff search over registered patient accounts (separate from kiosk encounters)
+export const searchStaffPatients = (token: string, query: string) =>
+  request<PatientSearchResult[]>(`/staff/patients?query=${encodeURIComponent(query)}`, { token });
+export const getStaffPatientProfile = (token: string, patientAccountId: string) =>
+  request<PatientProfile>(`/staff/patients/${patientAccountId}`, { token });
+export const generateStaffPatientSummary = (token: string, patientAccountId: string) =>
+  request<PatientHistorySummary>(`/staff/patients/${patientAccountId}/summary/generate`, { method: "POST", token });

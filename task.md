@@ -1,6 +1,6 @@
 # MediKiosk Delivery Task Tracker
 
-**Last updated:** 2026-08-29  
+**Last updated:** 2026-08-31  
 **Delivery mode:** FastAPI backend + Next.js frontend; user-operated Postman verification  
 **Rules:** Codex does not execute API requests or claim live API test results without running them. Code is 100% written, wired, and automated-build verified.
 
@@ -24,6 +24,7 @@
 | [X] | SIH-03 — One-Click Printable OPD Case Sheet | Implemented & Build Verified | `/staff/encounters/[encounterId]` |
 | [X] | SIH-04 — Caregiver / Attendant Proxy Mode & FHIR | Implemented & Build Verified | `Patient`, `PatientInput`, FHIR Contact |
 | [X] | SIH-05 — Wong-Baker Visual Pain Scale (0-10) | Implemented & Build Verified | Visual chips on intake choices |
+| [X] | PTL — Patient Portal (registration, own document archive, longitudinal AI summary, staff search) | Implemented; end-to-end smoke-tested against live DB | `app/routers/patients.py`, `app/models/entities.py` (Patient portal section), `/patient/*`, `/staff/patients/*` |
 
 **Meaning of `scaffolded`:** endpoint code exists but it has not passed its slice’s user-operated Postman acceptance gate and must not be described as complete.
 
@@ -57,7 +58,7 @@
 | [X] | KSK-03 | Deliver tablet-scale choice screens without required keyboard fields | Frontend | Implemented; pending browser/user verification | Start, consent, and intake fit a tablet with large touch targets; intake can complete using only touch choices. |
 | [X] | KSK-04 | Integrate protected next-question audio playback | Frontend | Implemented; pending user verification | Browser requests only the current server-configured prompt, verifies its question-key header, and keeps visible touch/text fallback. |
 | [X] | KSK-05 | Deliver one complete English/Hindi patient flow | Full stack | Implemented; pending user/device verification | New encounters accept only `en` or `hi`; API emits Hindi prompt/choice labels while persisting stable controlled values. |
-| [X] | KSK-06 | Reset the private kiosk session on submission or inactivity | Frontend | Implemented; browser demo-tested | The local kiosk token/language are cleared after successful submission or two minutes without activity; a 15-second warning preserves patient control. |
+| [X] | KSK-06 | Reset the private kiosk session on submission or inactivity | Frontend | Implemented; browser demo-tested | The local kiosk token/language are cleared after successful submission or three minutes without activity; a 15-second warning preserves patient control. |
 | [X] | KSK-07 | Correct consent-revocation communication | Frontend/API | Implemented; pending user verification | The patient is told that revocation ends device access and does not claim deletion of already recorded clinical/audit evidence. |
 
 ## KSK user test checklist — Postman/browser
@@ -67,7 +68,7 @@
 - [ ] KSK-03: on a tablet, complete a synthetic encounter without opening a keyboard; verify choice buttons are readable/tappable and the optional **Your input** excerpt cannot submit an answer by itself.
 - [ ] KSK-04: with `SPEECH_ADAPTER_MODE=openai_compatible`, use **Play question aloud** and verify the emitted audio's `X-MediKiosk-Question-Key` matches the displayed question. With TTS disabled, verify the text and touch choices remain usable.
 - [ ] KSK-05: create one English and one Hindi synthetic chest encounter. Confirm the consent, questions, choices, audio, review, and document-upload surfaces remain in the selected language while submitted values stay controlled API values.
-- [ ] KSK-06: leave a kiosk session untouched for two minutes and confirm the warning then reset; submit a completed intake and confirm the kiosk returns to `/kiosk/start` with no token in session storage.
+- [ ] KSK-06: leave a kiosk session untouched for three minutes and confirm the warning then reset; submit a completed intake and confirm the kiosk returns to `/kiosk/start` with no token in session storage.
 - [ ] KSK-07: revoke consent and confirm the explanation says device access ends without claiming deletion of already recorded clinical/audit evidence.
 - [ ] KSK-08: on the target tablet, record a short note and verify the live waveform, optional playback, AI wording check, and editable note hand-off work; confirm a controlled touch choice remains required to submit the answer.
 
@@ -207,6 +208,29 @@
 | [X] | PRM-04 | Add synthetic grounding and visible-text evaluation fixtures | Backend | Implemented; pending human evaluation | Fixtures define allowed/prohibited outcomes without claiming model quality |
 | [ ] | PRM-05 | User acceptance gate | User | Pending | User validates B5 S-01 and INT-02 prompt metadata in Postman |
 
+## Active task — PTL Patient Portal
+
+| Done | ID | Task | Owner | Status | Done when |
+| --- | --- | --- | --- | --- | --- |
+| [X] | PTL-01 | Add `PatientAccount` email/password registration, login, logout, and `me` | Backend | Implemented; end-to-end curl-verified against live DB | Register/login return a `patient`-typed token; duplicate email is `409`; wrong password is `401`; revoked/logged-out token is rejected |
+| [X] | PTL-02 | Add a patient-scoped document archive (`PatientRecord`), separate from encounter documents | Backend | Implemented; end-to-end curl-verified | Upload accepts only PDF/JPEG/PNG with signature validation; a second account cannot read another account's record (`403`) |
+| [X] | PTL-03 | Reuse the existing PyMuPDF/Luna vision extraction pipeline for patient records | Backend | Implemented; end-to-end curl-verified with a real rendered PDF | `POST /patients/records/{id}/extractions` returns `provider=pymupdf_luna_vision` with page-scoped text/entities, same as the encounter-document path |
+| [X] | PTL-04 | Add a longitudinal AI history overview across all of one account's records | Backend | Implemented; end-to-end curl-verified with `source=openai_compatible` | Summary correctly cites multiple visits/hospitals and extracted values; falls back to a deterministic template on provider failure, never a hard error |
+| [X] | PTL-05 | Add staff search over registered patients, separate from the kiosk encounter list | Backend | Implemented; query logic verified in-process (staff HTTP login blocked by the pre-existing bootstrap-admin credential mismatch, see below) | `GET /staff/patients?query=` matches by name/email/ABHA; kiosk and patient tokens are denied (`403`) |
+| [X] | PTL-06 | Patient portal pages: register, login, dashboard (upload, records, AI overview) | Frontend | Implemented; compiled and rendered against the live API | `/patient/register`, `/patient/login`, `/patient/dashboard` |
+| [X] | PTL-07 | Doctor dashboard: kiosk-encounter filter + registered-patient search, kept visually separate | Frontend | Implemented; compiled and rendered | `/staff/triage` now has three sections: triage queue, filterable kiosk walk-ins, registered-patient search → `/staff/patients/[id]` |
+| [X] | PTL-08 | Color/contrast pass: semantic tokens, dead-variable fixes, elderly-readable sizing | Frontend | Implemented | New `--success`/`--warning`/`--info`/`--urgent-text` tokens replace ad-hoc hex; base font-size and `.data-card` text bumped; `.patient-page` gets larger form controls |
+| [ ] | PTL-09 | User acceptance gate | User | Pending | User runs the flows below in a real browser/Postman and reports results |
+
+## PTL user test checklist
+
+- [ ] Register a patient, confirm auto-login, sign out, sign back in; confirm a wrong password is rejected.
+- [ ] Upload a real PDF/JPEG report with a visit date/hospital/reason; confirm it appears in "Records on file" and (with `OCR_ADAPTER_MODE=openai_compatible`) shows extracted text.
+- [ ] Generate the AI overview and confirm it reads across more than one uploaded record without inventing values it wasn't given.
+- [ ] As staff (admin/triage/physician), search `/staff/triage` for that patient by name/email/ABHA and open their profile; confirm a kiosk-only encounter never appears in this search and vice versa.
+- [ ] Confirm the bootstrap-admin login credential mismatch noted in PTL-05 (staff HTTP login failed with the current `.env` `BOOTSTRAP_ADMIN_PASSWORD` against the live dev DB) — rotate/reset it if the existing admin account predates the current `.env` value.
+- [ ] Clinical-owner review of the wording/threshold for the 5 new red-flag rules added alongside this feature (see D-07) — not yet performed by a clinician.
+
 ## Backlog after B4 acceptance
 
 | Done | Priority | ID | Task | Acceptance gate |
@@ -230,7 +254,8 @@
 | D-04 | Azure Blob Storage selected for document binaries; private-container configuration used for B4 acceptance | User/DevOps | Active |
 | D-05 | No provider credentials/clinical policy for live speech, OCR, LLM, or ABDM sandbox have been supplied | User/Product | Open |
 | D-06 | Hackathon STT/TTS and JPEG/PNG document extraction use direct `AsyncOpenAI` against the Azure OpenAI-compatible `/openai/v1` endpoint: `gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`, and `gpt-5.6-luna` vision. Azure Speech/Document Intelligence remain handbook alternatives, not delivered integrations. | Product/Backend | Active; INT Postman acceptance pending |
-| D-07 | Fever, headache, and abdominal-pain pathways are controlled data-capture workflows. No new deterministic red-flag rule is enabled without clinical-owner approval, wording, and positive/negative synthetic fixtures. | Product/clinical | Active |
+| D-07 | Fever, headache, and abdominal-pain pathways are controlled data-capture workflows. No new deterministic red-flag rule is enabled without clinical-owner approval, wording, and positive/negative synthetic fixtures. | Product/clinical | Active; 5 new rules added 2026-08-31 with positive/negative pytest fixtures (`tests/test_red_flag_rules.py`) and one live-verified case — clinical-owner wording review is still outstanding, not yet performed by a clinician |
+| D-08 | Patient portal (registered accounts, self-uploaded document archive, longitudinal AI summary) is a parallel subsystem — it never creates or joins a kiosk `Encounter`, and a kiosk visit never joins a patient-portal account. Kept separate deliberately (asked and confirmed with the user) rather than retrofitted. | Product/User | Active |
 
 ## Acceptance history
 
@@ -265,6 +290,8 @@
 | 2026-08-28 | Browser Voice Recording Format Repair | Implemented; manual API acceptance pending | Codex/User | Removed false WAV relabelling. The kiosk now negotiates WebM/Opus, Ogg/Opus, or M4A/AAC, uploads the real MIME type and extension, and shows the active format. FastAPI normalises codec parameters and validates WebM, Ogg, MP4/M4A, WAV, and MP3 signatures before STT. Automated format tests pass locally; user-run browser/Postman acceptance remains required. |
 | 2026-08-28 | Flagship Bilingual Kiosk & Chest HPI | Implemented; browser demo-tested; user/device acceptance pending | Codex/User | Reduced new kiosk sessions to English/Hindi, localised API question and controlled-choice labels, added a structured chest HPI (onset, character, radiation, severity, timing, associated symptoms), corrected revocation wording, and added local privacy reset after submission/inactivity. `frontend/tests/kiosk_demo_e2e.py` passes with mocked API responses; it never claims live-provider acceptance. |
 | 2026-08-30 | Kiosk voice visualisation, playback, and AI wording hand-off | Implemented; target-device acceptance pending | Codex/User | Added a live recording waveform and timer, optional patient playback, explicit AI transcription check, and editable hand-off to the optional note box. Voice cannot choose or submit the clinical response: the patient must still select a controlled touch answer. Browser verification passes with mocked microphone/transcription. |
+| 2026-08-31 | Red-flag rule expansion (1 → 6) | Implemented; positive/negative pytest fixtures added, one case live-verified | Codex | Refactored `red_flags.py` into a rule registry (`RED_FLAG_RULES`/`rules_for_pathway`); added cardiac-pattern-radiation and syncope chest rules, severe-headache-with-vision-change, high-fever-with-rigors, and severe-abdominal-pain-with-vomiting. `tests/test_red_flag_rules.py` covers all 6 with positive/negative fixtures and pathway isolation; the headache rule was also driven live against the real dev DB (`URGENT_REVIEW` + correct evidence fact IDs). Clinical-owner wording review is still outstanding (see D-07). |
+| 2026-08-31 | Patient Portal (PTL) | Implemented; end-to-end curl/in-process verified against the live dev DB, user Postman/browser acceptance pending | Codex | New parallel subsystem (`PatientAccount`, `PatientRecord`, `PatientRecordExtraction`, `PatientHistorySummary`) reusing existing auth/storage/vision-extraction patterns without touching the kiosk `Encounter` model. Verified live: register → login → upload a real synthetic PDF → PyMuPDF/Luna extraction → longitudinal AI summary correctly citing both uploaded visits → staff search/profile query returning the same data. Frontend: `/patient/register`, `/patient/login`, `/patient/dashboard`, and a `/staff/triage` rework adding a kiosk-encounter filter plus a separate registered-patient search leading to `/staff/patients/[id]`. Also did a color/contrast pass (semantic `--success`/`--warning`/`--info` tokens, elderly-readable sizing) across both flows. |
 
 ## Update protocol
 

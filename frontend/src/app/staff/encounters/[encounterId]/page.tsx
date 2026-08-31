@@ -335,7 +335,7 @@ export default function StaffEncounterPage() {
                   {record.patient.abha_identifier && (
                     <div>
                       <small>ABHA Address</small>
-                      <code style={{ fontSize: "0.85rem", color: "#1d4ed8" }}>{record.patient.abha_identifier}</code>
+                      <code style={{ fontSize: "0.85rem", color: "var(--info)" }}>{record.patient.abha_identifier}</code>
                     </div>
                   )}
                   <div>
@@ -417,7 +417,7 @@ export default function StaffEncounterPage() {
               {(clinicalAbnormalities.labAlerts.length > 0 || clinicalAbnormalities.drugAlerts.length > 0) && (
                 <div style={{ marginTop: "1.5rem", padding: "1.25rem", borderRadius: "12px", border: "1px solid #ef4444", background: "rgba(239, 68, 68, 0.05)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                    <h2 className="display" style={{ fontSize: "1.2rem", margin: 0, color: "#b91c1c" }}>
+                    <h2 className="display" style={{ fontSize: "1.2rem", margin: 0, color: "var(--urgent-text)" }}>
                       ⚡ Automated Clinical Lab & Drug Safety Warnings
                     </h2>
                     <span className="tag urgent">
@@ -441,7 +441,7 @@ export default function StaffEncounterPage() {
                                 {alert.status.replace("_", " ")}
                               </span>
                             </div>
-                            <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: alert.severity === "urgent" ? "#b91c1c" : "#92400e" }}>
+                            <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: alert.severity === "urgent" ? "var(--urgent-text)" : "var(--warning)" }}>
                               {alert.interpretation} {alert.sourceDoc ? `• Source: ${alert.sourceDoc}` : ""}
                             </p>
                           </div>
@@ -458,7 +458,7 @@ export default function StaffEncounterPage() {
                         {clinicalAbnormalities.drugAlerts.map((drugAlert, idx) => (
                           <div key={idx} className="data-card" style={{ borderLeft: "3px solid #ef4444", padding: "0.75rem 1rem" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <strong style={{ color: "#b91c1c" }}>⚠️ {drugAlert.title}</strong>
+                              <strong style={{ color: "var(--urgent-text)" }}>⚠️ {drugAlert.title}</strong>
                               <span className="tag urgent">{drugAlert.severity}</span>
                             </div>
                             <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--ink-soft)" }}>{drugAlert.detail}</p>
@@ -528,7 +528,7 @@ export default function StaffEncounterPage() {
                 <div style={{ marginTop: "1.5rem", padding: "1.25rem", borderRadius: "12px", border: "1px solid #3b82f6", background: "rgba(59, 130, 246, 0.05)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
                     <div>
-                      <h3 style={{ margin: 0, color: "#1d4ed8" }}>📦 ABDM FHIR R4 Bundle Generated</h3>
+                      <h3 style={{ margin: 0, color: "var(--info)" }}>📦 ABDM FHIR R4 Bundle Generated</h3>
                       <p style={{ margin: "0.2rem 0 0", fontSize: "0.8rem", opacity: 0.8 }}>Export ID: {fhirExport.id}</p>
                     </div>
                     <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -557,7 +557,7 @@ export default function StaffEncounterPage() {
               {selectedDocMeta && (
                 <div style={{ marginTop: "1.5rem", padding: "1rem", borderRadius: "10px", border: "1px solid #10b981", background: "rgba(16, 185, 129, 0.05)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <strong style={{ color: "#047857" }}>ℹ️ Document Metadata: {selectedDocMeta.original_filename}</strong>
+                    <strong style={{ color: "var(--success)" }}>ℹ️ Document Metadata: {selectedDocMeta.original_filename}</strong>
                     <button className="button-secondary" onClick={() => setSelectedDocMeta(null)} type="button" style={{ fontSize: "0.75rem" }}>Close</button>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.5rem", marginTop: "0.5rem", fontSize: "0.85rem" }}>

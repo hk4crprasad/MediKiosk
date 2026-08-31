@@ -34,6 +34,11 @@ _PROMPT_FILES = {
         "luna-vision-v1",
         "document-extraction.luna-vision-v1.md",
     ),
+    "patient_history_summary": (
+        "patient_history_summary.longitudinal_overview",
+        "openai-compatible-v1",
+        "patient-history-summary.openai-compatible-v1.md",
+    ),
 }
 
 

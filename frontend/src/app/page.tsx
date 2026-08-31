@@ -6,8 +6,9 @@ import { getHealth } from "@/lib/api";
 
 const roles = [
   { index: "01 / patient or caregiver", title: "Begin with a clear story.", body: "Guided questions, touch/voice controls, and a private encounter that follows one person only.", href: "/kiosk/start", action: "Start a kiosk session" },
-  { index: "02 / physician", title: "Review what matters.", body: "See structured history, evidence, document reviews, and a draft that remains yours to verify.", href: "/staff/login", action: "Open clinician workspace" },
-  { index: "03 / triage", title: "Act on reviewed rules.", body: "A focused urgent-review queue preserves exactly why a rule was raised and who acknowledged it.", href: "/staff/login", action: "Open triage queue" },
+  { index: "02 / registered patient", title: "Keep your own record.", body: "Register once, upload prior reports and prescriptions, and build a personal history a doctor can review later.", href: "/patient/login", action: "Open patient portal" },
+  { index: "03 / physician", title: "Review what matters.", body: "See structured history, evidence, document reviews, and a draft that remains yours to verify.", href: "/staff/login", action: "Open clinician workspace" },
+  { index: "04 / triage", title: "Act on reviewed rules.", body: "A focused urgent-review queue preserves exactly why a rule was raised and who acknowledged it.", href: "/staff/login", action: "Open triage queue" },
 ];
 
 export default function Home() {

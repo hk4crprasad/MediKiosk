@@ -39,7 +39,7 @@ export function AbdmExchangeSimulator({
     <div style={{ marginTop: "1.25rem", padding: "1.25rem", borderRadius: "12px", border: "1px solid #3b82f6", background: "rgba(59, 130, 246, 0.03)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
         <div>
-          <span className="tag" style={{ background: "rgba(59, 130, 246, 0.15)", color: "#1d4ed8", fontSize: "0.75rem" }}>
+          <span className="tag" style={{ background: "rgba(59, 130, 246, 0.15)", color: "var(--info)", fontSize: "0.75rem" }}>
             🇮🇳 Ayushman Bharat Digital Mission (ABDM)
           </span>
           <h3 className="display" style={{ fontSize: "1.2rem", margin: "0.25rem 0 0", color: "#1e3a8a" }}>

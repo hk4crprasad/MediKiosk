@@ -80,6 +80,17 @@ async def get_principal(
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is no longer active"
                 )
+        if principal.token_type == "patient":
+            from app.models import PatientAccount, RevokedToken
+
+            is_revoked = await session.scalar(
+                select(RevokedToken.id).where(RevokedToken.token_id == principal.token_id)
+            )
+            account = await session.get(PatientAccount, principal.subject)
+            if is_revoked or account is None or not account.active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is no longer active"
+                )
         return principal
     except (InvalidTokenError, ValueError, KeyError) as exc:
         raise HTTPException(
@@ -94,3 +105,9 @@ def require_staff(*roles: str):
         return principal
 
     return dependency
+
+
+async def require_patient(principal: Principal = Depends(get_principal)) -> Principal:
+    if principal.token_type != "patient":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Patient account token required")
+    return principal

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const KIOSK_STORAGE_KEYS = ["medikiosk.kiosk_token", "medikiosk.language"] as const;
-const DEFAULT_IDLE_TIMEOUT_MS = 120_000;
+const DEFAULT_IDLE_TIMEOUT_MS = 180_000;
 const IDLE_WARNING_MS = 15_000;
 
 function configuredIdleTimeoutMs(): number {

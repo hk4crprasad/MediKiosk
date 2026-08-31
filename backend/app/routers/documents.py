@@ -1,5 +1,3 @@
-import re
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -15,24 +13,15 @@ from app.models.entities import DocumentStatus
 from app.schemas.documents import DocumentResponse, DocumentTimelineItem
 from app.services.access import ensure_encounter_access, get_encounter_or_404
 from app.services.audit import write_audit
+from app.services.document_validation import (
+    ALLOWED_MIME_TYPES,
+    has_expected_file_signature,
+    safe_filename,
+)
 from app.services.intake import ensure_active_consent
 from app.services.storage import AzureBlobDocumentStorage
 
 router = APIRouter(tags=["documents"])
-ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png"}
-
-
-def safe_filename(filename: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]", "_", Path(filename).name)[:200] or "upload"
-
-
-def has_expected_file_signature(content: bytes, mime_type: str) -> bool:
-    signatures = {
-        "application/pdf": b"%PDF-",
-        "image/jpeg": b"\xff\xd8\xff",
-        "image/png": b"\x89PNG\r\n\x1a\n",
-    }
-    return content.startswith(signatures[mime_type])
 
 
 @router.post(

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     staff_token_expire_minutes: int = 480
     kiosk_token_expire_minutes: int = 60
+    patient_token_expire_minutes: int = 1440
     cors_origins: str = "http://localhost:3000,http://localhost:3001"
     azure_storage_connection_string: str | None = None
     azure_blob_container: str = "medikiosk-documents"

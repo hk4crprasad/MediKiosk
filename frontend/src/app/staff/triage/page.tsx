@@ -3,7 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { acknowledgeFlag, getAllEncounters, logout, ApiError, getTriageQueue, TriageQueueItem, EncounterListItem } from "@/lib/api";
+import {
+  acknowledgeFlag,
+  getAllEncounters,
+  logout,
+  ApiError,
+  getTriageQueue,
+  searchStaffPatients,
+  TriageQueueItem,
+  EncounterListItem,
+  PatientSearchResult,
+} from "@/lib/api";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Draft", IN_PROGRESS: "In progress", URGENT_REVIEW: "Urgent review",
@@ -20,9 +30,15 @@ export default function TriagePage() {
   const [token, setToken] = useState<string | null>(null);
   const [items, setItems] = useState<TriageQueueItem[]>([]);
   const [encounters, setEncounters] = useState<EncounterListItem[]>([]);
+  const [kioskFilter, setKioskFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const [patientQuery, setPatientQuery] = useState("");
+  const [patientResults, setPatientResults] = useState<PatientSearchResult[]>([]);
+  const [patientSearchLoading, setPatientSearchLoading] = useState(false);
+  const [patientSearched, setPatientSearched] = useState(false);
 
   const loadData = useCallback(async (activeToken: string) => {
     setLoading(true); setError("");
@@ -53,6 +69,19 @@ export default function TriagePage() {
     finally { setWorking(null); }
   }
 
+  async function searchPatients() {
+    if (!token) return;
+    setPatientSearchLoading(true);
+    setPatientSearched(true);
+    try {
+      setPatientResults(await searchStaffPatients(token, patientQuery));
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "The patient search could not be completed.");
+    } finally {
+      setPatientSearchLoading(false);
+    }
+  }
+
   async function signOut() {
     if (token) {
       try { await logout(token); } catch { /* ignore */ }
@@ -60,6 +89,13 @@ export default function TriagePage() {
     sessionStorage.removeItem("medikiosk.staff_token");
     router.push("/staff/login");
   }
+
+  const filteredEncounters = kioskFilter.trim()
+    ? encounters.filter((enc) => {
+        const haystack = `${enc.patient_display_name ?? ""} ${STATUS_LABEL[enc.encounter_status] ?? enc.encounter_status} ${PATHWAY_LABEL[enc.pathway_version] ?? enc.pathway_version}`.toLowerCase();
+        return haystack.includes(kioskFilter.trim().toLowerCase());
+      })
+    : encounters;
 
   return (
     <main className="page-wrap">
@@ -84,17 +120,61 @@ export default function TriagePage() {
             {error && <p className="notice error" role="alert">{error}</p>}
           </div>
         </section>
+
         <section className="form-shell" style={{ marginTop: "1.5rem" }}>
           <div className="panel">
-            <div className="split-title"><div><p className="eyebrow">All patients</p><h2 className="display" style={{ fontSize: "1.6rem" }}>Recent encounters.</h2></div><small>{encounters.length} total</small></div>
-            <p className="panel-copy">Every kiosk intake session, regardless of red-flag status.</p>
+            <div className="split-title"><div><p className="eyebrow">Kiosk walk-ins</p><h2 className="display" style={{ fontSize: "1.6rem" }}>Recent kiosk encounters.</h2></div><small>{filteredEncounters.length} of {encounters.length}</small></div>
+            <p className="panel-copy">Anonymous, short-lived kiosk intake sessions — one per visit, not a persistent account.</p>
+            <label className="field full" htmlFor="kioskFilter" style={{ maxWidth: "26rem" }}>
+              <span>Filter by name, status, or complaint</span>
+              <input id="kioskFilter" onChange={(e) => setKioskFilter(e.target.value)} placeholder="e.g. chest discomfort, urgent review…" type="text" value={kioskFilter} />
+            </label>
             {loading && <p className="notice">Loading encounters…</p>}
             {!loading && encounters.length === 0 && <p className="notice">No encounters recorded yet. Start a kiosk session to see patients here.</p>}
-            {!loading && encounters.length > 0 && <div className="data-list">{encounters.map((enc) => <article className="data-card" key={enc.encounter_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}><div>{enc.has_active_red_flag && <span className="tag urgent" style={{ marginBottom: "0.25rem", display: "inline-block" }}>⚠ Active red flag</span>}<strong style={{ display: "block" }}>{enc.patient_display_name ?? "Anonymous patient"}</strong><p style={{ margin: "0.15rem 0 0" }}><small>{PATHWAY_LABEL[enc.pathway_version] ?? enc.pathway_version}{enc.patient_birth_year ? ` · b. ${enc.patient_birth_year}` : ""}{enc.patient_sex ? ` · ${enc.patient_sex}` : ""}{" · "}{STATUS_LABEL[enc.encounter_status] ?? enc.encounter_status}{" · "}{new Date(enc.created_at).toLocaleString()}</small></p></div><Link className="button-secondary" href={`/staff/encounters/${enc.encounter_id}`} style={{ whiteSpace: "nowrap" }}>Open record</Link></article>)}</div>}
+            {!loading && encounters.length > 0 && filteredEncounters.length === 0 && <p className="notice">No kiosk encounters match &ldquo;{kioskFilter}&rdquo;.</p>}
+            {!loading && filteredEncounters.length > 0 && <div className="data-list">{filteredEncounters.map((enc) => <article className="data-card" key={enc.encounter_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}><div>{enc.has_active_red_flag && <span className="tag urgent" style={{ marginBottom: "0.25rem", display: "inline-block" }}>⚠ Active red flag</span>}<strong style={{ display: "block" }}>{enc.patient_display_name ?? "Anonymous patient"}</strong><p style={{ margin: "0.15rem 0 0" }}><small>{PATHWAY_LABEL[enc.pathway_version] ?? enc.pathway_version}{enc.patient_birth_year ? ` · b. ${enc.patient_birth_year}` : ""}{enc.patient_sex ? ` · ${enc.patient_sex}` : ""}{" · "}{STATUS_LABEL[enc.encounter_status] ?? enc.encounter_status}{" · "}{new Date(enc.created_at).toLocaleString()}</small></p></div><Link className="button-secondary" href={`/staff/encounters/${enc.encounter_id}`} style={{ whiteSpace: "nowrap" }}>Open record</Link></article>)}</div>}
+          </div>
+        </section>
+
+        <section className="form-shell" style={{ marginTop: "1.5rem" }}>
+          <div className="panel">
+            <div className="split-title"><div><p className="eyebrow">Registered patients</p><h2 className="display" style={{ fontSize: "1.6rem" }}>Search patient accounts.</h2></div></div>
+            <p className="panel-copy">Patients who registered their own portal account and built a personal document history over time — separate from anonymous kiosk visits above.</p>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+              <label className="field" htmlFor="patientQuery" style={{ flex: 1, minWidth: "220px" }}>
+                <span>Name, email, or ABHA ID</span>
+                <input id="patientQuery" onChange={(e) => setPatientQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void searchPatients(); }} type="text" value={patientQuery} />
+              </label>
+              <button className="button-primary" disabled={patientSearchLoading} onClick={searchPatients} type="button">
+                {patientSearchLoading ? "Searching…" : "Search"}
+              </button>
+            </div>
+            {patientSearched && !patientSearchLoading && patientResults.length === 0 && (
+              <p className="notice" style={{ marginTop: "1rem" }}>No registered patients matched that search.</p>
+            )}
+            {patientResults.length > 0 && (
+              <div className="data-list" style={{ marginTop: "1rem" }}>
+                {patientResults.map((patient) => (
+                  <article className="data-card" key={patient.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div>
+                      <strong style={{ display: "block" }}>{patient.display_name ?? patient.email}</strong>
+                      <p style={{ margin: "0.15rem 0 0" }}>
+                        <small>
+                          {patient.email}
+                          {patient.abha_identifier ? ` · ${patient.abha_identifier}` : ""}
+                          {" · "}{patient.record_count} record{patient.record_count === 1 ? "" : "s"}
+                          {patient.last_activity_at ? ` · last activity ${new Date(patient.last_activity_at).toLocaleDateString()}` : ""}
+                        </small>
+                      </p>
+                    </div>
+                    <Link className="button-secondary" href={`/staff/patients/${patient.id}`}>Open record</Link>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </>}
     </main>
   );
 }
-

@@ -16,7 +16,18 @@ from app.core.errors import DomainError, domain_error_handler
 from app.core.security import hash_password
 from app.models import User  # ensures all models register with Base metadata
 from app.models.entities import UserRole
-from app.routers import assistive, auth, clinical, documents, encounters, fhir, health, intake, summaries
+from app.routers import (
+    assistive,
+    auth,
+    clinical,
+    documents,
+    encounters,
+    fhir,
+    health,
+    intake,
+    patients,
+    summaries,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,6 +70,11 @@ async def apply_development_schema_repairs() -> None:
                 "ALTER TABLE IF EXISTS summaries ADD COLUMN IF NOT EXISTS "
                 "prompt_metadata JSONB NOT NULL DEFAULT '{}'::jsonb"
             )
+        )
+        # revoked_tokens now records revocations for both staff and patient-portal
+        # tokens (see models/entities.py); drop the users-only FK on an existing dev DB.
+        await connection.execute(
+            text("ALTER TABLE IF EXISTS revoked_tokens DROP CONSTRAINT IF EXISTS revoked_tokens_actor_id_fkey")
         )
 
 
@@ -169,3 +185,5 @@ app.include_router(documents.router, prefix=settings.api_v1_prefix)
 app.include_router(assistive.router, prefix=settings.api_v1_prefix)
 app.include_router(summaries.router, prefix=settings.api_v1_prefix)
 app.include_router(fhir.router, prefix=settings.api_v1_prefix)
+app.include_router(patients.router, prefix=settings.api_v1_prefix)
+app.include_router(patients.staff_router, prefix=settings.api_v1_prefix)
