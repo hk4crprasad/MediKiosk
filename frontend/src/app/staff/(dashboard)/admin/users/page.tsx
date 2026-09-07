@@ -1,0 +1,113 @@
+"use client";
+
+import { useState } from "react";
+import { ApiError, createStaffUser } from "@/lib/api";
+
+type CreatedUser = {
+  id: string;
+  email: string;
+  role: string;
+  active: boolean;
+};
+
+export default function AdminUsersPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"admin" | "triage" | "physician">("physician");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [users, setUsers] = useState<CreatedUser[]>([]);
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    const token = sessionStorage.getItem("medikiosk.staff_token");
+    if (!token) return;
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const created = await createStaffUser(token, { email, password, role });
+      setUsers((prev) => [created, ...prev]);
+      setSuccess(`Staff account created for ${created.email} (${created.role}).`);
+      setEmail("");
+      setPassword("");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Failed to create staff user.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="panel">
+      <p className="eyebrow">Hospital Administration</p>
+      <h1 className="display">Staff user management.</h1>
+      <p className="panel-copy">Provision access for triage staff, nurses, and hospital physicians.</p>
+
+      <form onSubmit={handleCreateUser} style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          <label className="field" style={{ flex: 2, minWidth: "200px" }}>
+            <span>Staff Email</span>
+            <input
+              type="email"
+              required
+              placeholder="doctor.sharma@hospital.gov.in"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+
+          <label className="field" style={{ flex: 2, minWidth: "180px" }}>
+            <span>Password</span>
+            <input
+              type="password"
+              required
+              placeholder="Temporary password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+
+          <label className="field" style={{ flex: 1, minWidth: "140px" }}>
+            <span>Role</span>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as "admin" | "triage" | "physician")}
+            >
+              <option value="physician">Physician (Doctor)</option>
+              <option value="triage">Triage (Nurse / Staff)</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </label>
+        </div>
+
+        {success && <p className="notice success">{success}</p>}
+        {error && <p className="notice error" role="alert">{error}</p>}
+
+        <div className="button-row" style={{ marginTop: "0.5rem" }}>
+          <button className="button-primary" disabled={loading} type="submit">
+            {loading ? "Provisioning account…" : "Create staff account →"}
+          </button>
+        </div>
+      </form>
+
+      {users.length > 0 && (
+        <div style={{ marginTop: "2rem" }}>
+          <h2 className="display" style={{ fontSize: "1.2rem" }}>Recently provisioned users</h2>
+          <div className="data-list">
+            {users.map((u) => (
+              <div className="data-card" key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <strong>{u.email}</strong>
+                  <p style={{ margin: "0.2rem 0 0" }}><small>ID: {u.id.slice(0, 8)}</small></p>
+                </div>
+                <span className="tag">{u.role}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
